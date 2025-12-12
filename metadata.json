@@ -1,0 +1,5 @@
+{
+  "name": "TURN UP GOLF",
+  "description": "A comprehensive management application for Turn Up Golf Studio, allowing members and admins to track lessons, view notices, manage profiles, and check pricing information.",
+  "requestFramePermissions": []
+}

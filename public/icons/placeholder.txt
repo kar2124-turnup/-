@@ -1,0 +1,3 @@
+Please add app icon files in this directory.
+- icon-192x192.png
+- icon-512x512.png
