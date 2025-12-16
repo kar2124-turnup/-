@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../services/api';
@@ -66,6 +65,27 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
       }
     };
     fetchData();
+
+    // Polling for real-time updates (reservations, notifications, payments)
+    const interval = setInterval(async () => {
+        try {
+            const [notificationsData, reservationsData, paymentsData, lessonsData] = await Promise.all([
+                api.getNotifications(),
+                api.getReservations(),
+                api.getPayments(),
+                api.getLessons()
+            ]);
+            setNotifications(notificationsData);
+            setReservations(reservationsData);
+            setPayments(paymentsData);
+            setLessons(lessonsData);
+        } catch (error) {
+            console.error("Failed to poll for updates:", (error as Error).message);
+        }
+    }, 5000); // 5 seconds
+
+    return () => clearInterval(interval);
+
   }, [setUsers, currentUser.id]);
 
   const { unreadPaymentsCount, unreadLessonReservationsCount, unreadTrainingRoomReservationsCount, unreadMentalReservationsCount } = useMemo(() => {

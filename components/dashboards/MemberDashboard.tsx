@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../services/api';
@@ -12,10 +13,12 @@ import Lessons from '../content/Lessons';
 import PriceList from '../content/PriceList';
 import Profile from '../content/Profile';
 import Reservations from '../content/Reservations';
+import MentalAnalysis from '../content/MentalAnalysis';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import NotificationsPage from '../content/NotificationsPage';
 import PasswordChangeModal from '../PasswordChangeModal';
+import { Brain } from 'lucide-react';
 
 
 interface MemberDashboardProps {
@@ -26,7 +29,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   const { users, setUsers, updateCurrentUser } = useAuth();
   const { showToast } = useToast();
   const confirm = useConfirmation();
-  const [activeTab, setActiveTab] = useLocalState<TurnUpTab>('turn-up-golf-member-active-tab', 'home');
+  const [activeTab, setActiveTab] = useLocalState<TurnUpTab | 'analysis'>('turn-up-golf-member-active-tab', 'home');
 
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lessons, setLessons] = useState<LessonEntry[]>([]);
@@ -125,7 +128,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   }, [reservations, currentUser.id]);
 
 
-  const handleTabClick = (tab: TurnUpTab) => {
+  const handleTabClick = (tab: TurnUpTab | 'analysis') => {
     setActiveTab(tab);
   };
 
@@ -195,7 +198,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
                   updateCurrentUser(updatedUser);
                   setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
               }
-              // Fix: Corrected a typo (backtick instead of single quote) that was causing a syntax error.
               showToast('성공', '모든 알림이 삭제되었습니다.', 'success');
           } catch (error) {
               showToast('오류', '알림 삭제 중 오류가 발생했습니다.', 'error');
@@ -228,22 +230,24 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   
   const instructors = useMemo(() => users.filter(u => u.role === 'instructor'), [users]);
 
-  const TABS: { id: TurnUpTab; label: string }[] = [
+  const TABS: { id: TurnUpTab | 'analysis'; label: string }[] = [
     { id: 'home', label: '홈' },
-    { id: 'notices', label: '공지사항' },
-    { id: 'lessons', label: '레슨일지' },
     { id: 'reservations', label: '시설예약' },
+    { id: 'lessons', label: '레슨일지' },
+    { id: 'analysis', label: '멘탈분석' },
+    { id: 'notices', label: '공지사항' },
     { id: 'price', label: '레슨상품' },
     { id: 'notifications', label: '알림함' },
     { id: 'profile', label: '내 정보' },
   ];
   
-  const TAB_TITLE_MAP: Record<TurnUpTab, string> = {
+  const TAB_TITLE_MAP: Record<string, string> = {
     dashboard: '홈',
     home: '홈',
     notices: '공지사항',
     lessons: '나의 레슨일지',
     reservations: '시설 예약',
+    analysis: 'PSMT 멘탈 분석',
     price: '레슨상품 안내',
     profile: '내 정보',
     instructors: '프로 소개',
@@ -322,6 +326,20 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
                       </ul>
                   </Card>
                 )}
+                
+                <Card className="bg-slate-800/50 border border-slate-700">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h2 className="text-lg font-bold text-white mb-1">PSMT 멘탈 분석</h2>
+                            <p className="text-sm text-slate-400">나의 골프 심리/멘탈 유형을 분석해보세요.</p>
+                        </div>
+                        <Button onClick={() => setActiveTab('analysis')} className="bg-pink-600 hover:bg-pink-700">
+                             <Brain className="mr-2" size={18} />
+                             분석하기
+                        </Button>
+                    </div>
+                </Card>
+
                 <Notices notices={notices} setNotices={setNotices} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} updateCurrentUser={updateCurrentUser} />
             </div>
         );
@@ -331,6 +349,8 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
         return <Lessons lessons={lessons} setLessons={setLessons} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} updateCurrentUser={updateCurrentUser} />;
       case 'reservations':
         return <Reservations reservations={reservations} setReservations={setReservations} updateCurrentUser={updateCurrentUser} instructors={instructors} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} />;
+      case 'analysis':
+        return <MentalAnalysis />;
       case 'price':
         return <PriceList prices={prices} setPrices={() => {}} />;
       case 'notifications':
@@ -350,7 +370,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
             unreadCount={unreadCount} 
             notifications={sortedNotifications}
             onMarkAllAsRead={markAllAsRead}
-            pageTitle={TAB_TITLE_MAP[activeTab]}
+            pageTitle={TAB_TITLE_MAP[activeTab as string] || '홈'}
             onPasswordChangeClick={() => setPasswordModalOpen(true)}
             onNotificationClick={handleNotificationClick}
           />
