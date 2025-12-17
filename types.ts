@@ -1,5 +1,4 @@
 
-
 // Fix: Added all necessary type definitions and exported them.
 // This resolves the "module has no exported member" errors across the application.
 // It also removes the incorrect self-import and constant definitions that were previously in this file.
@@ -10,6 +9,7 @@ export interface Membership {
     '30': number;
     '50': number;
     'mental'?: number;
+    'rentals'?: number; // Added rentals count
   };
 }
 
@@ -29,6 +29,7 @@ export interface User {
   daysOff?: number[]; // 0 (Sun) to 6 (Sat)
   oneTimeOff?: string[]; // 'YYYY-MM-DD'
   memo?: string;
+  licensePlate?: string;
 }
 
 export interface Notice {
@@ -61,6 +62,7 @@ export interface PriceItem {
   discountPercent: number;
   isEvent?: boolean;
   mentalCoachingCount?: number;
+  rentalCount?: number; // Added rental count for products
 }
 
 export interface NotificationItem {
@@ -87,7 +89,7 @@ export interface Payment {
 
 export interface Reservation {
   id: string;
-  type: 'lesson' | 'training_room' | 'mental';
+  type: 'lesson' | 'training_room' | 'mental' | 'lesson_room_rental';
   memberId: string;
   memberName: string;
   dateTime: string;

@@ -1,3 +1,4 @@
+
 import { STORAGE_KEYS } from '../constants';
 import type { User, Notice, LessonEntry, PriceItem, NotificationItem, Payment, Reservation } from '../types';
 import { generateUUID, nowISO, daysFromNow, calcPackPublicPrice } from '../utils/helpers';
@@ -6,12 +7,12 @@ import { generateUUID, nowISO, daysFromNow, calcPackPublicPrice } from '../utils
 const seedData = {
   getUsers: (): User[] => ([
     // Admin user
-    { id: 'admin', username: 'tug', name: '관리자', password: '2124', role: 'admin', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 999, '50': 999, 'mental': 999 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-0000-0000', memo: '' },
+    { id: 'admin', username: 'tug', name: '관리자', password: '2124', role: 'admin', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 999, '50': 999, 'mental': 999, 'rentals': 999 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-0000-0000', memo: '' },
     
     // New Members
-    { id: 'user_sparrow', username: '1', name: '참새', password: '1', role: 'member', membership: { start: nowISO(), end: daysFromNow(60), sessions: { '30': 10, '50': 10, 'mental': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-1111', memo: '등록 상품: 50분 10회 레슨' },
-    { id: 'user_pigeon', username: '2', name: '비둘기', password: '2', role: 'member', membership: { start: nowISO(), end: daysFromNow(30), sessions: { '30': 5, '50': 5, 'mental': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-2222', memo: '' },
-    { id: 'user_eagle', username: '3', name: '독수리', password: '3', role: 'member', membership: { start: nowISO(), end: daysFromNow(-10), sessions: { '30': 0, '50': 0, 'mental': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-3333-3333', memo: '재등록 요망' }, // Expired member
+    { id: 'user_sparrow', username: '1', name: '참새', password: '1', role: 'member', membership: { start: nowISO(), end: daysFromNow(60), sessions: { '30': 10, '50': 10, 'mental': 0, 'rentals': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-1111', memo: '등록 상품: 50분 10회 레슨' },
+    { id: 'user_pigeon', username: '2', name: '비둘기', password: '2', role: 'member', membership: { start: nowISO(), end: daysFromNow(30), sessions: { '30': 5, '50': 5, 'mental': 0, 'rentals': 5 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-2222', memo: '' },
+    { id: 'user_eagle', username: '3', name: '독수리', password: '3', role: 'member', membership: { start: nowISO(), end: daysFromNow(-10), sessions: { '30': 0, '50': 0, 'mental': 0, 'rentals': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-3333-3333', memo: '재등록 요망' }, // Expired member
     
     // New Instructors
     { id: 'inst_jwoo', username: '11', name: '안진우', password: '11', role: 'instructor', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-0000', color: '#3b82f6', daysOff: [2], oneTimeOff: [], memo: '' }, // Tuesday off
@@ -25,11 +26,12 @@ const seedData = {
     { id: generateUUID(), authorId: users.find(u => u.role === 'admin')?.id || 'admin', title: '새로운 레슨 프로그램 런칭', body: '초보자를 위한 스윙 교정 프로그램이 새롭게 시작됩니다. 많은 관심 부탁드립니다.', createdAt: daysFromNow(-10) },
   ]),
   getPrices: (): PriceItem[] => ([
-    { id: 'event1', isEvent: true, name: '썸머 스페셜 이벤트', desc: '여름 시즌을 맞아 특별 할인 이벤트를 진행합니다. 지금 바로 등록하세요!', count: 20, sessionMinutes: 50, durationDays: 120, listPrice: 1000000, discountPercent: 20, mentalCoachingCount: 0 },
-    { id: 'p1', name: '50분 10회 레슨', desc: '가장 인기 있는 기본 패키지입니다. 3개월 내 사용 가능합니다.', count: 10, sessionMinutes: 50, durationDays: 90, listPrice: calcPackPublicPrice(10), discountPercent: 10, mentalCoachingCount: 0 },
-    { id: 'p2', name: '50분 20회 레슨', desc: '장기적인 실력 향상을 위한 합리적인 선택입니다.', count: 20, sessionMinutes: 50, durationDays: 180, listPrice: calcPackPublicPrice(20), discountPercent: 15, mentalCoachingCount: 0 },
-    { id: 'p3', name: '30분 10회 레슨', desc: '집중적인 교정을 위한 30분 레슨 패키지입니다.', count: 10, sessionMinutes: 30, durationDays: 90, listPrice: calcPackPublicPrice(10) * 0.7, discountPercent: 5, mentalCoachingCount: 0 },
-    { id: 'p_mental', name: '멘탈코칭 5회', desc: '필드에서의 심리적 안정을 위한 전문 멘탈 코칭 프로그램입니다.', count: 0, sessionMinutes: 50, durationDays: 60, listPrice: 500000, discountPercent: 0, mentalCoachingCount: 5 },
+    { id: 'event1', isEvent: true, name: '썸머 스페셜 이벤트', desc: '여름 시즌을 맞아 특별 할인 이벤트를 진행합니다. 지금 바로 등록하세요!', count: 20, sessionMinutes: 50, durationDays: 120, listPrice: 1000000, discountPercent: 20, mentalCoachingCount: 0, rentalCount: 0 },
+    { id: 'p1', name: '50분 10회 레슨', desc: '가장 인기 있는 기본 패키지입니다. 3개월 내 사용 가능합니다.', count: 10, sessionMinutes: 50, durationDays: 90, listPrice: calcPackPublicPrice(10), discountPercent: 10, mentalCoachingCount: 0, rentalCount: 0 },
+    { id: 'p2', name: '50분 20회 레슨', desc: '장기적인 실력 향상을 위한 합리적인 선택입니다.', count: 20, sessionMinutes: 50, durationDays: 180, listPrice: calcPackPublicPrice(20), discountPercent: 15, mentalCoachingCount: 0, rentalCount: 0 },
+    { id: 'p3', name: '30분 10회 레슨', desc: '집중적인 교정을 위한 30분 레슨 패키지입니다.', count: 10, sessionMinutes: 30, durationDays: 90, listPrice: calcPackPublicPrice(10) * 0.7, discountPercent: 5, mentalCoachingCount: 0, rentalCount: 0 },
+    { id: 'p_mental', name: '멘탈코칭 5회', desc: '필드에서의 심리적 안정을 위한 전문 멘탈 코칭 프로그램입니다.', count: 0, sessionMinutes: 50, durationDays: 60, listPrice: 500000, discountPercent: 0, mentalCoachingCount: 5, rentalCount: 0 },
+    { id: 'p_rental', name: 'GC쿼드 대관 10회', desc: 'GC쿼드 룸을 자유롭게 이용할 수 있는 대관권입니다.', count: 0, sessionMinutes: 60, durationDays: 90, listPrice: 300000, discountPercent: 0, mentalCoachingCount: 0, rentalCount: 10 },
   ]),
   getLessons: (users: User[]): LessonEntry[] => {
     const member = users.find(u => u.username === '1');
@@ -442,7 +444,7 @@ const markNotificationsAsReadByType = async (userId: string, type: 'notice' | 'l
     return targetUser;
 };
 
-const markNotificationsAsReadByReservationType = async (userId: string, reservationType: 'lesson' | 'training_room' | 'mental'): Promise<User | null> => {
+const markNotificationsAsReadByReservationType = async (userId: string, reservationType: 'lesson' | 'training_room' | 'mental' | 'lesson_room_rental'): Promise<User | null> => {
     await new Promise(res => setTimeout(res, DELAY));
     const notifications = _getData<NotificationItem[]>(STORAGE_KEYS.notifications) || [];
     const reservations = _getData<Reservation[]>(STORAGE_KEYS.reservations) || [];
@@ -561,7 +563,8 @@ const processPaymentAndExtendMembership = async (userId: string, item: PriceItem
             const newSessions = {
                 ...u.membership.sessions,
                 [sessionKey]: (u.membership.sessions[sessionKey] || 0) + item.count,
-                'mental': (u.membership.sessions['mental'] || 0) + (item.mentalCoachingCount || 0)
+                'mental': (u.membership.sessions['mental'] || 0) + (item.mentalCoachingCount || 0),
+                'rentals': (u.membership.sessions['rentals'] || 0) + (item.rentalCount || 0)
             };
 
             return {
@@ -607,7 +610,7 @@ const processPaymentAndExtendMembership = async (userId: string, item: PriceItem
         _addNotification({
             userId: admin.id,
             title: '신규 결제 발생',
-            body: `${member?.name}님이 '${item.name}' (${item.sessionMinutes}분/${item.count}회${item.mentalCoachingCount ? ` + 멘탈코칭 ${item.mentalCoachingCount}회` : ''}) 상품을 ${amount.toLocaleString()}원에 구매했습니다.`,
+            body: `${member?.name}님이 '${item.name}' (${item.sessionMinutes}분/${item.count}회${item.mentalCoachingCount ? ` + 멘탈코칭 ${item.mentalCoachingCount}회` : ''}${item.rentalCount ? ` + 대관 ${item.rentalCount}회` : ''}) 상품을 ${amount.toLocaleString()}원에 구매했습니다.`,
             type: 'payment',
             refId: newPayment.id
         });
@@ -710,6 +713,38 @@ const createReservation = async (reservationData: Omit<Reservation, 'id' | 'crea
         instructorNotificationBody = `${member.name}님이 프로님과 ${reservationTime} 멘탈코칭을 예약했습니다.`;
         adminNotificationBody = `${member.name}님이 ${instructor.name} 프로와 ${reservationTime} 멘탈코칭을 예약했습니다.`;
 
+    } else if (reservationData.type === 'lesson_room_rental') {
+        // Lesson Room Rental Logic - GC Quad Unified
+        instructorName = 'GC쿼드'; // Unified name
+        
+        // Check rental balance
+        if ((member.membership.sessions['rentals'] || 0) <= 0) {
+            throw new Error('대관권이 없습니다. 상품을 구매해주세요.');
+        }
+
+        // Deduct rental session
+        updatedUsers = users.map(u => {
+            if (u.id === member.id) {
+                return {
+                    ...u,
+                    membership: { 
+                        ...u.membership, 
+                        sessions: { 
+                            ...u.membership.sessions, 
+                            'rentals': (u.membership.sessions['rentals'] || 0) - 1 
+                        } 
+                    }
+                };
+            }
+            return u;
+        });
+        
+        notificationTitle = 'GC쿼드 대관 예약 알림';
+        const reservationTime = new Date(reservationData.dateTime).toLocaleString('ko-KR');
+        memberNotificationBody = `[예약 완료] ${reservationTime} GC쿼드 대관(60분)이 예약되었습니다. (대관권 1회 차감)`;
+        instructorNotificationBody = null; // No specific instructor to notify
+        adminNotificationBody = `${member.name}님이 ${reservationTime} GC쿼드 대관을 예약했습니다.`;
+
     } else if (reservationData.type === 'training_room') {
         const reqDate = new Date(reservationData.dateTime);
         const reqDateString = reqDate.toDateString();
@@ -785,7 +820,7 @@ const deleteReservation = async (id: string, cancellerId: string, adminPassword?
         return { reservations: updatedReservations, users };
     }
 
-    if (canceller.role === 'admin' && (reservationToDelete.type === 'lesson' || reservationToDelete.type === 'mental')) {
+    if (canceller.role === 'admin' && (reservationToDelete.type === 'lesson' || reservationToDelete.type === 'mental' || reservationToDelete.type === 'lesson_room_rental')) {
         if (!adminPassword || canceller.password !== adminPassword) {
             throw new Error('관리자 비밀번호가 일치하지 않습니다.');
         }
@@ -833,7 +868,25 @@ const deleteReservation = async (id: string, cancellerId: string, adminPassword?
                 }
                 return u;
             });
+        } else if (reservationToDelete.type === 'lesson_room_rental') {
+            // Refund rental ticket
+            updatedUsers = users.map(u => {
+                if (u.id === reservationToDelete.memberId) {
+                    return {
+                        ...u,
+                        membership: {
+                            ...u.membership,
+                            sessions: {
+                                ...u.membership.sessions,
+                                'rentals': (u.membership.sessions['rentals'] || 0) + 1,
+                            }
+                        }
+                    };
+                }
+                return u;
+            });
         }
+        
         _setData(STORAGE_KEYS.users, updatedUsers);
     }
 
@@ -845,18 +898,21 @@ const deleteReservation = async (id: string, cancellerId: string, adminPassword?
     let facilityName = '수련의 방';
     if (reservationToDelete.type === 'lesson') facilityName = `${reservationToDelete.instructorName} 프로 레슨`;
     if (reservationToDelete.type === 'mental') facilityName = `${reservationToDelete.instructorName} 프로 멘탈코칭`;
+    if (reservationToDelete.type === 'lesson_room_rental') facilityName = 'GC쿼드 대관';
 
     // Notify member and/or instructor
     if (canceller.role === 'member') {
         if (member) {
-            _addNotification({ userId: member.id, title: '예약 취소 알림', body: `[예약 취소] ${reservationTime} ${facilityName} 예약이 취소되었습니다.`, type: 'reservation', refId: reservationToDelete.id });
+            const refundMsg = reservationToDelete.type === 'lesson_room_rental' ? '(대관권 환불)' : '';
+            _addNotification({ userId: member.id, title: '예약 취소 알림', body: `[예약 취소] ${reservationTime} ${facilityName} 예약이 취소되었습니다. ${refundMsg}`, type: 'reservation', refId: reservationToDelete.id });
         }
         if (instructor) {
             _addNotification({ userId: instructor.id, title: '예약 취소됨', body: `${member?.name ?? '회원'}님이 ${reservationTime} 예약을 취소했습니다.`, type: 'reservation', refId: reservationToDelete.id });
         }
     } else { // Canceller is admin or instructor
         if (member && !isPastLesson) {
-             _addNotification({ userId: member.id, title: '예약 취소 알림', body: `[예약 취소] ${canceller.name} 프로/관리자에 의해 ${reservationTime} ${facilityName} 예약이 취소되었습니다.`, type: 'reservation', refId: reservationToDelete.id });
+             const refundMsg = reservationToDelete.type === 'lesson_room_rental' ? '(대관권 환불)' : '';
+             _addNotification({ userId: member.id, title: '예약 취소 알림', body: `[예약 취소] ${canceller.name} 프로/관리자에 의해 ${reservationTime} ${facilityName} 예약이 취소되었습니다. ${refundMsg}`, type: 'reservation', refId: reservationToDelete.id });
         }
     }
 
@@ -909,6 +965,7 @@ const updateReservationStatus = async (reservationId: string, status: 'attended'
     let facilityName = '수련의 방';
     if (reservationToUpdate.type === 'lesson') facilityName = '레슨';
     if (reservationToUpdate.type === 'mental') facilityName = '멘탈코칭';
+    if (reservationToUpdate.type === 'lesson_room_rental') facilityName = 'GC쿼드 대관';
 
     if(member) {
         _addNotification({
@@ -920,8 +977,8 @@ const updateReservationStatus = async (reservationId: string, status: 'attended'
         });
     }
 
-    // If a LESSON/MENTAL status is changed, notify all admins.
-    if (reservationToUpdate.type === 'lesson' || reservationToUpdate.type === 'mental') {
+    // If a LESSON/MENTAL/RENTAL status is changed, notify all admins.
+    if (reservationToUpdate.type === 'lesson' || reservationToUpdate.type === 'mental' || reservationToUpdate.type === 'lesson_room_rental') {
         const admins = users.filter(u => u.role === 'admin');
         admins.forEach(admin => {
             _addNotification({

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import type { PriceItem } from '../../types';
@@ -25,6 +26,7 @@ const DEFAULT_NEW_PRICE: Omit<PriceItem, 'id'> = {
   discountPercent: 0,
   isEvent: false,
   mentalCoachingCount: 0,
+  rentalCount: 0,
 };
 
 const PriceList: React.FC<PriceListProps> = ({ prices, setPrices }) => {
@@ -89,8 +91,8 @@ const PriceList: React.FC<PriceListProps> = ({ prices, setPrices }) => {
   };
 
   const handleSaveNew = async () => {
-    if (!newPrice.name || (newPrice.count <= 0 && (newPrice.mentalCoachingCount || 0) <= 0)) {
-      showToast('오류', '상품명과 세션 횟수(레슨 또는 멘탈코칭)를 입력해주세요.', 'error');
+    if (!newPrice.name || (newPrice.count <= 0 && (newPrice.mentalCoachingCount || 0) <= 0 && (newPrice.rentalCount || 0) <= 0)) {
+      showToast('오류', '상품명과 세션(레슨, 멘탈, 대관 중 하나 이상) 횟수를 입력해주세요.', 'error');
       return;
     }
 
@@ -153,9 +155,10 @@ const PriceList: React.FC<PriceListProps> = ({ prices, setPrices }) => {
         <Input value={p.name} onChange={e => changeHandler('name', e.target.value)} placeholder="상품명" className="text-xl font-bold mb-2" />
         <Input value={p.desc} onChange={e => changeHandler('desc', e.target.value)} placeholder="상품 설명" className="text-sm mb-4" />
         <div className="space-y-2 text-sm text-slate-300">
-          <p><strong>세션:</strong> <Input type="number" value={p.count} onChange={e => changeHandler('count', Number(e.target.value))} className="w-20 inline-block" /> 회</p>
+          <p><strong>레슨 세션:</strong> <Input type="number" value={p.count} onChange={e => changeHandler('count', Number(e.target.value))} className="w-20 inline-block" /> 회</p>
           <p><strong>멘탈코칭:</strong> <Input type="number" value={p.mentalCoachingCount || 0} onChange={e => changeHandler('mentalCoachingCount', Number(e.target.value))} className="w-20 inline-block" /> 회</p>
-          <p><strong>시간:</strong> <Input type="number" value={p.sessionMinutes} onChange={e => changeHandler('sessionMinutes', Number(e.target.value))} className="w-20 inline-block" /> 분</p>
+          <p><strong>대관 횟수:</strong> <Input type="number" value={p.rentalCount || 0} onChange={e => changeHandler('rentalCount', Number(e.target.value))} className="w-20 inline-block" /> 회</p>
+          <p><strong>레슨 시간:</strong> <Input type="number" value={p.sessionMinutes} onChange={e => changeHandler('sessionMinutes', Number(e.target.value))} className="w-20 inline-block" /> 분</p>
           <p><strong>사용기간:</strong> <Input type="number" value={p.durationDays} onChange={e => changeHandler('durationDays', Number(e.target.value))} className="w-20 inline-block" /> 일</p>
           <p><strong>정가:</strong> <Input type="number" value={p.listPrice} onChange={e => changeHandler('listPrice', Number(e.target.value))} className="w-28 inline-block" /> 원</p>
           <p><strong>할인:</strong> <Input type="number" value={p.discountPercent} onChange={e => changeHandler('discountPercent', Number(e.target.value))} className="w-20 inline-block" /> %</p>
@@ -211,11 +214,13 @@ const PriceList: React.FC<PriceListProps> = ({ prices, setPrices }) => {
                   </h3>
                   <p className="text-slate-300 text-sm mb-4 flex-grow">{p.desc}</p>
                   <ul className="text-sm space-y-1 text-slate-300">
-                    <li><strong>세션:</strong> {p.count}회</li>
+                    <li><strong>레슨:</strong> {p.count}회 ({p.sessionMinutes}분)</li>
                     {p.mentalCoachingCount && p.mentalCoachingCount > 0 ? (
                         <li><strong>멘탈코칭:</strong> {p.mentalCoachingCount}회</li>
                     ) : null}
-                    {p.sessionMinutes && <li><strong>시간:</strong> {p.sessionMinutes}분 / 세션</li>}
+                    {p.rentalCount && p.rentalCount > 0 ? (
+                        <li><strong>대관:</strong> {p.rentalCount}회</li>
+                    ) : null}
                     {p.durationDays && <li><strong>사용기간:</strong> {p.durationDays}일</li>}
                   </ul>
                   <div className="mt-4 pt-4 border-t border-slate-700">

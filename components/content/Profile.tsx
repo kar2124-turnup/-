@@ -69,11 +69,12 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
       name: '',
       username: '',
       phone: '',
+      licensePlate: '', // Initial value for license plate
       role: 'member',
       membership: {
         start: new Date().toISOString(),
         end: new Date().toISOString(),
-        sessions: { '30': 0, '50': 0, 'mental': 0 },
+        sessions: { '30': 0, '50': 0, 'mental': 0, 'rentals': 0 },
       },
       notificationsRead: {},
       // Fix: Added missing 'notificationsDeleted' property to satisfy the User type.
@@ -147,7 +148,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
       }
   };
 
-  const handleFieldChange = (field: keyof User | 'sessions30' | 'sessions50' | 'sessionsMental' | 'end', value: string | number) => {
+  const handleFieldChange = (field: keyof User | 'sessions30' | 'sessions50' | 'sessionsMental' | 'sessionsRentals' | 'end', value: string | number) => {
     if (!editingUser) return;
 
     if (field === 'end') {
@@ -171,10 +172,11 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
             },
         });
 
-    } else if (field === 'sessions30' || field === 'sessions50' || field === 'sessionsMental') {
-        let sessionKey: '30' | '50' | 'mental' = '30';
+    } else if (field === 'sessions30' || field === 'sessions50' || field === 'sessionsMental' || field === 'sessionsRentals') {
+        let sessionKey: '30' | '50' | 'mental' | 'rentals' = '30';
         if (field === 'sessions50') sessionKey = '50';
         if (field === 'sessionsMental') sessionKey = 'mental';
+        if (field === 'sessionsRentals') sessionKey = 'rentals';
 
         setEditingUser({
             ...editingUser,
@@ -225,6 +227,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
           const sessionKey = product.sessionMinutes === 30 ? '30' : '50';
           const currentCount = editingUser.membership.sessions[sessionKey] || 0;
           const currentMental = editingUser.membership.sessions['mental'] || 0;
+          const currentRentals = editingUser.membership.sessions['rentals'] || 0;
           
           setEditingUser({
               ...editingUser,
@@ -234,7 +237,8 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                   sessions: {
                       ...editingUser.membership.sessions,
                       [sessionKey]: currentCount + product.count,
-                      'mental': currentMental + (product.mentalCoachingCount || 0)
+                      'mental': currentMental + (product.mentalCoachingCount || 0),
+                      'rentals': currentRentals + (product.rentalCount || 0)
                   }
               },
               memo: `등록 상품: ${product.name}`
@@ -275,14 +279,16 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
   };
 
   const filteredUsers = useMemo(() => {
-    const members = users.filter(user => user.role !== 'instructor');
+    // Only show 'member' role users. Hide 'instructor', 'mental_coach', and 'admin'.
+    const members = users.filter(user => user.role === 'member');
     if (!searchTerm.trim()) {
       return members;
     }
     const lowercasedFilter = searchTerm.trim().toLowerCase();
     return members.filter(user => 
       user.name.toLowerCase().includes(lowercasedFilter) || 
-      user.username.toLowerCase().includes(lowercasedFilter)
+      user.username.toLowerCase().includes(lowercasedFilter) ||
+      (user.licensePlate && user.licensePlate.toLowerCase().includes(lowercasedFilter))
     );
   }, [users, searchTerm]);
 
@@ -316,6 +322,10 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                     <Input value={editingUser.phone} onChange={e => handleFieldChange('phone', e.target.value)} required />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">차량번호</label>
+                    <Input value={editingUser.licensePlate || ''} onChange={e => handleFieldChange('licensePlate', e.target.value)} placeholder="예: 12가 3456" />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">등급</label>
                     <Select value={editingUser.role} onChange={e => handleFieldChange('role', e.target.value)}>
                         <option value="member">member</option>
@@ -334,13 +344,17 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                     <label className="block text-sm font-medium text-slate-300 mb-1">멘탈코칭</label>
                     <Input type="number" value={editingUser.membership.sessions['mental'] || 0} onChange={e => handleFieldChange('sessionsMental', e.target.value)} />
                   </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">대관 잔여</label>
+                    <Input type="number" value={editingUser.membership.sessions['rentals'] || 0} onChange={e => handleFieldChange('sessionsRentals', e.target.value)} />
+                  </div>
                   <div className="md:col-span-2 p-3 bg-slate-700/30 rounded-lg border border-slate-600/50">
                     <label className="block text-sm font-bold text-yellow-400 mb-2">상품 선택 (자동 입력)</label>
                     <Select onChange={handleProductAutoFill} defaultValue="">
                         <option value="" disabled>상품을 선택하면 세션과 기간이 자동 입력됩니다.</option>
                         {prices.map(price => (
                             <option key={price.id} value={price.id}>
-                                {price.name} ({price.count}회 {price.mentalCoachingCount ? `+ 멘탈${price.mentalCoachingCount}회` : ''} / {price.durationDays}일)
+                                {price.name} ({price.count}회 {price.mentalCoachingCount ? `+ 멘탈${price.mentalCoachingCount}회` : ''} {price.rentalCount ? `+ 대관${price.rentalCount}회` : ''} / {price.durationDays}일)
                             </option>
                         ))}
                     </Select>
@@ -388,7 +402,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
             <div className="flex items-center gap-2">
                 <div className="relative w-full md:w-auto">
                     <Input 
-                        placeholder="이름 또는 아이디로 검색"
+                        placeholder="이름, 아이디 또는 차량번호"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="pl-10 w-full md:w-64"
@@ -405,6 +419,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이름</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">아이디</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">연락처</th>
+                <th scope="col" className="px-6 py-3 whitespace-nowrap">차량번호</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">메모</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">남은 세션</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이용기간</th>
@@ -422,11 +437,19 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                       <td className="px-6 py-4 font-medium text-white whitespace-nowrap">{user.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.phone}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{user.licensePlate || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate" title={user.memo}>{user.memo || '-'}</td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        {user.role === 'member' 
-                            ? `${user.membership.sessions['30']}/${user.membership.sessions['50']}/${user.membership.sessions['mental'] || 0}` 
-                            : '-'}
+                      <td className="px-6 py-4 whitespace-nowrap text-xs">
+                        {user.role === 'member' ? (
+                            <div className="flex flex-col gap-1">
+                                <span className="text-slate-300">30분: <span className="text-yellow-400 font-bold">{user.membership.sessions['30']}</span>회</span>
+                                <span className="text-slate-300">50분: <span className="text-yellow-400 font-bold">{user.membership.sessions['50']}</span>회</span>
+                                <span className="text-slate-300">멘탈: <span className="text-pink-400 font-bold">{user.membership.sessions['mental'] || 0}</span>회</span>
+                                <span className="text-slate-300">대관: <span className="text-orange-400 font-bold">{user.membership.sessions['rentals'] || 0}</span>회</span>
+                            </div>
+                        ) : (
+                            '-'
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{new Date(user.membership.end).toLocaleDateString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -475,7 +498,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                 })
               ) : (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-slate-400">
+                  <td colSpan={9} className="text-center py-12 text-slate-400">
                     {searchTerm ? '검색된 회원이 없습니다.' : '등록된 회원이 없습니다.'}
                   </td>
                 </tr>
@@ -536,15 +559,16 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                   <p><strong>이름:</strong> {currentUser?.name}</p>
                   <p><strong>아이디:</strong> {currentUser?.username}</p>
                   <p><strong>연락처:</strong> {currentUser?.phone}</p>
+                  {currentUser?.licensePlate && <p><strong>차량번호:</strong> {currentUser?.licensePlate}</p>}
               </div>
           </Card>
       </div>
       <div className="lg:col-span-2">
         <Card>
           <h2 className="text-xl font-bold text-white mb-4">멤버십 정보</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="space-y-4 col-span-2">
-                  <div className="flex gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="space-y-4 col-span-3">
+                  <div className="flex gap-8 flex-wrap">
                     <div>
                         <p className="text-slate-400">30분 레슨 잔여</p>
                         <p className="text-3xl font-bold text-yellow-400">{currentUser?.membership.sessions['30']}회</p>
@@ -557,9 +581,13 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                         <p className="text-slate-400">멘탈코칭 잔여</p>
                         <p className="text-3xl font-bold text-purple-400">{currentUser?.membership.sessions['mental'] || 0}회</p>
                     </div>
+                    <div>
+                        <p className="text-slate-400">대관 잔여</p>
+                        <p className="text-3xl font-bold text-orange-400">{currentUser?.membership.sessions['rentals'] || 0}회</p>
+                    </div>
                   </div>
               </div>
-               <div className='text-center md:text-left'>
+               <div className='text-center md:text-left col-span-1'>
                   <p className="text-slate-400">이용기간 만료</p>
                   <p className="text-3xl font-bold text-yellow-400">{daysUntil(currentUser?.membership.end || '')}일 남음</p>
                   <p className="text-sm text-slate-500">{new Date(currentUser?.membership.end || '').toLocaleDateString()} 까지</p>
@@ -578,6 +606,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                       <p className="text-sm text-slate-400">
                         {p.productDetails.sessionMinutes}분 레슨 / {p.productDetails.count}회
                         {p.productDetails.mentalCoachingCount ? ` + 멘탈코칭 ${p.productDetails.mentalCoachingCount}회` : ''}
+                        {p.productDetails.rentalCount ? ` + 대관 ${p.productDetails.rentalCount}회` : ''}
                       </p>
                     )}
                     <p className="text-xs text-slate-500 mt-1">{new Date(p.createdAt).toLocaleString()}</p>

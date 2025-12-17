@@ -13,12 +13,12 @@ import Lessons from '../content/Lessons';
 import PriceList from '../content/PriceList';
 import Profile from '../content/Profile';
 import Reservations from '../content/Reservations';
-import MentalAnalysis from '../content/MentalAnalysis';
+// MentalAnalysis import removed
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import NotificationsPage from '../content/NotificationsPage';
 import PasswordChangeModal from '../PasswordChangeModal';
-import { Brain } from 'lucide-react';
+// Brain icon removed
 
 
 interface MemberDashboardProps {
@@ -29,7 +29,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   const { users, setUsers, updateCurrentUser } = useAuth();
   const { showToast } = useToast();
   const confirm = useConfirmation();
-  const [activeTab, setActiveTab] = useLocalState<TurnUpTab | 'analysis'>('turn-up-golf-member-active-tab', 'home');
+  const [activeTab, setActiveTab] = useLocalState<TurnUpTab>('turn-up-golf-member-active-tab', 'home');
 
   const [notices, setNotices] = useState<Notice[]>([]);
   const [lessons, setLessons] = useState<LessonEntry[]>([]);
@@ -128,7 +128,7 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   }, [reservations, currentUser.id]);
 
 
-  const handleTabClick = (tab: TurnUpTab | 'analysis') => {
+  const handleTabClick = (tab: TurnUpTab) => {
     setActiveTab(tab);
   };
 
@@ -230,11 +230,10 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
   
   const instructors = useMemo(() => users.filter(u => u.role === 'instructor'), [users]);
 
-  const TABS: { id: TurnUpTab | 'analysis'; label: string }[] = [
+  const TABS: { id: TurnUpTab; label: string }[] = [
     { id: 'home', label: '홈' },
     { id: 'reservations', label: '시설예약' },
     { id: 'lessons', label: '레슨일지' },
-    { id: 'analysis', label: '멘탈분석' },
     { id: 'notices', label: '공지사항' },
     { id: 'price', label: '레슨상품' },
     { id: 'notifications', label: '알림함' },
@@ -247,7 +246,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
     notices: '공지사항',
     lessons: '나의 레슨일지',
     reservations: '시설 예약',
-    analysis: 'PSMT 멘탈 분석',
     price: '레슨상품 안내',
     profile: '내 정보',
     instructors: '프로 소개',
@@ -327,19 +325,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
                   </Card>
                 )}
                 
-                <Card className="bg-slate-800/50 border border-slate-700">
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <h2 className="text-lg font-bold text-white mb-1">PSMT 멘탈 분석</h2>
-                            <p className="text-sm text-slate-400">나의 골프 심리/멘탈 유형을 분석해보세요.</p>
-                        </div>
-                        <Button onClick={() => setActiveTab('analysis')} className="bg-pink-600 hover:bg-pink-700">
-                             <Brain className="mr-2" size={18} />
-                             분석하기
-                        </Button>
-                    </div>
-                </Card>
-
                 <Notices notices={notices} setNotices={setNotices} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} updateCurrentUser={updateCurrentUser} />
             </div>
         );
@@ -349,8 +334,6 @@ const MemberDashboard: React.FC<MemberDashboardProps> = ({ currentUser }) => {
         return <Lessons lessons={lessons} setLessons={setLessons} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} updateCurrentUser={updateCurrentUser} />;
       case 'reservations':
         return <Reservations reservations={reservations} setReservations={setReservations} updateCurrentUser={updateCurrentUser} instructors={instructors} setNotifications={setNotifications} notifications={notifications} currentUser={currentUser} />;
-      case 'analysis':
-        return <MentalAnalysis />;
       case 'price':
         return <PriceList prices={prices} setPrices={() => {}} />;
       case 'notifications':

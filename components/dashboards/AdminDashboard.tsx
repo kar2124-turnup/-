@@ -105,6 +105,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
                 } else if (res?.type === 'mental') {
                     counts.unreadMentalReservationsCount++;
                 }
+                // Lesson room rental notifications can be grouped or counted separately.
+                // Currently, they might not increment these specific counters unless we add another one or group them.
+                // For simplicity, let's group them with 'Lesson' or just handle general reservation notifications in the total count.
+                // Given the existing structure, they will contribute to the total 'reservations' tab badge if we sum them up in the TABS definition.
             }
         }
     });
@@ -193,9 +197,20 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
   
   const instructors = useMemo(() => users.filter(u => u.role === 'instructor'), [users]);
 
+  // Calculate unread reservation notifications including the new type
+  const totalUnreadReservations = useMemo(() => {
+      if (!currentUser || !notifications) return 0;
+      return notifications.filter(n => {
+          return !currentUser.notificationsRead?.[n.id] && 
+                 !currentUser.notificationsDeleted?.[n.id] && 
+                 n.userId === currentUser.id && 
+                 n.type === 'reservation';
+      }).length;
+  }, [notifications, currentUser]);
+
   const TABS: { id: TurnUpTab; label: string; unreadCount?: number }[] = [
     { id: 'dashboard', label: '대시보드', unreadCount: unreadPaymentsCount },
-    { id: 'reservations', label: '예약관리', unreadCount: unreadLessonReservationsCount + unreadTrainingRoomReservationsCount + unreadMentalReservationsCount },
+    { id: 'reservations', label: '예약관리', unreadCount: totalUnreadReservations },
     { id: 'lessons', label: '레슨일지' },
     { id: 'notices', label: '공지사항' },
     { id: 'users', label: '통합 회원관리' },

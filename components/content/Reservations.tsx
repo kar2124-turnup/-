@@ -7,7 +7,7 @@ import { useConfirmation } from '../../contexts/ConfirmationContext';
 import { api } from '../../services/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { ChevronLeft, ChevronRight, X, Brain } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X, Brain, DoorOpen } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Input } from '../ui/Input';
 
@@ -87,16 +87,16 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
   // Combine both for general lookup, or use specific lists based on context
   const allPros = useMemo(() => [...golfInstructors, ...mentalCoaches], [golfInstructors, mentalCoaches]);
 
-  const [reservationMode, setReservationMode] = useState<'lesson' | 'training_room' | 'mental' | null>(null);
+  const [reservationMode, setReservationMode] = useState<'lesson' | 'training_room' | 'mental' | 'lesson_room_rental' | null>(null);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedDuration, setSelectedDuration] = useState<30 | 50 | null>(null);
+  const [selectedDuration, setSelectedDuration] = useState<30 | 50 | 60 | null>(null);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string | null>(null);
   
   // State for instructor calendar view
   const [viewDate, setViewDate] = useState(new Date());
   const [selectedCalendarDate, setSelectedCalendarDate] = useState<Date | null>(null);
-  const [filterType, setFilterType] = useState<'all' | 'lesson' | 'training_room' | 'mental'>('all');
+  const [filterType, setFilterType] = useState<'all' | 'lesson' | 'training_room' | 'mental' | 'lesson_room_rental'>('all');
 
   // New state for cancellation confirmation
   const [cancellationToConfirm, setCancellationToConfirm] = useState<Reservation | null>(null);
@@ -146,20 +146,23 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
   const has30minSessions = (member?.membership.sessions['30'] ?? 0) > 0;
   const has50minSessions = (member?.membership.sessions['50'] ?? 0) > 0;
   const hasMentalSessions = (member?.membership.sessions['mental'] ?? 0) > 0;
+  const hasRentalSessions = (member?.membership.sessions['rentals'] ?? 0) > 0;
 
   const handleInstructorSelection = (instructorId: string) => {
       setSelectedInstructorId(instructorId);
   };
   
-  const handleFilterChange = async (type: 'all' | 'lesson' | 'training_room' | 'mental') => {
+  const handleFilterChange = async (type: 'all' | 'lesson' | 'training_room' | 'mental' | 'lesson_room_rental') => {
       setFilterType(type);
 
-      if ((type === 'lesson' || type === 'training_room' || type === 'mental') && updateCurrentUser) {
+      if ((type === 'lesson' || type === 'training_room' || type === 'mental' || type === 'lesson_room_rental') && updateCurrentUser) {
           const hasUnread = type === 'lesson' 
               ? (unreadLessonReservationsCount ?? 0) > 0 
               : type === 'training_room' 
                 ? (unreadTrainingRoomReservationsCount ?? 0) > 0
-                : (unreadMentalReservationsCount ?? 0) > 0;
+                : type === 'mental' 
+                    ? (unreadMentalReservationsCount ?? 0) > 0
+                    : false; // Assuming rental doesn't have a separate count passed in props for now
           
           if (hasUnread) {
               try {
@@ -186,6 +189,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
         } else if (reservationMode === 'mental' && mentalCoaches.length === 1) {
             handleInstructorSelection(mentalCoaches[0].id);
         }
+        // Lesson room rental no longer auto-selects instructor as it's unified to GC Quad
     }
   }, [isAdmin, isInstructor, isMentalCoach, golfInstructors, mentalCoaches, reservationMode]);
   
@@ -266,7 +270,6 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
     });
   };
 
-  // ... (handleLessonReservation, handleMentalReservation, etc. remain largely the same, logic depends on selectedInstructorId) ...
   const handleLessonReservation = async (dateTime: Date) => {
     if (!currentUser || !selectedDuration || !selectedInstructorId) return;
     
@@ -352,6 +355,65 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
     }
   };
 
+  const handleLessonRoomRentalReservation = async (dateTime: Date) => {
+    if (!currentUser) return;
+    const DURATION = 60; // 60 minutes
+    
+    // Check rental ticket balance
+    const memberData = users.find(u => u.id === currentUser.id);
+    const rentals = memberData?.membership.sessions['rentals'] || 0;
+
+    if (rentals <= 0) {
+        showToast('오류', '대관권이 없습니다. 상품을 구매해주세요.', 'error');
+        return;
+    }
+
+    const isToday = new Date().toDateString() === dateTime.toDateString();
+    let confirmationMessage: string | React.ReactNode = `${dateTime.toLocaleString('ko-KR')}에 GC쿼드(60분)를 예약하시겠습니까?`;
+
+    if (currentUser.role === 'member') {
+        const warning = isToday ? <><br/><span className="font-bold text-yellow-400">[안내] 당일 예약은 취소가 불가능합니다.</span></> : null;
+        confirmationMessage = (
+            <>
+                {`${dateTime.toLocaleString('ko-KR')}에 GC쿼드(60분)를 예약하시겠습니까?`}
+                <br />
+                <span className="text-orange-400 font-bold">보유 대관권 1회가 차감됩니다. (잔여: {rentals}회)</span>
+                {warning}
+                <br />
+                <span>계속하시겠습니까?</span>
+            </>
+        );
+    }
+
+    const isConfirmed = await confirm(confirmationMessage);
+
+    if (isConfirmed) {
+      setIsLoading(true);
+      try {
+        const result = await api.createReservation({ 
+            type: 'lesson_room_rental', 
+            memberId: currentUser.id, 
+            dateTime: dateTime.toISOString(), 
+            duration: DURATION,
+            // Removed instructorId for rental
+        });
+        setReservations(result.reservations);
+        if(setUsers) setUsers(result.users);
+        const updatedUser = result.users.find(u => u.id === currentUser.id);
+        if(updateCurrentUser && updatedUser) updateCurrentUser(updatedUser);
+        
+        const newNotifications = await api.getNotifications();
+        setNotifications(newNotifications);
+        
+        showToast('성공', 'GC쿼드 예약이 완료되었습니다. 대관권 1회가 차감되었습니다.', 'success');
+      } catch (error) {
+        showToast('오류', (error as Error).message, 'error');
+      } finally {
+        setIsLoading(false);
+      }
+    }
+  };
+
   const handleTrainingRoomReservation = async (dateTime: Date) => {
     if (!currentUser) return;
     const DURATION = 60; // 60 minutes
@@ -413,7 +475,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
         return;
     }
     
-    if (currentUser.role === 'member' && (reservation.type === 'lesson' || reservation.type === 'mental')) {
+    if (currentUser.role === 'member' && (reservation.type === 'lesson' || reservation.type === 'mental' || reservation.type === 'lesson_room_rental')) {
       const today = new Date();
       today.setHours(0,0,0,0);
       const reservationDay = new Date(reservation.dateTime);
@@ -425,7 +487,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
       }
     }
     
-    if (isAdmin && (reservation.type === 'lesson' || reservation.type === 'mental')) {
+    if (isAdmin && (reservation.type === 'lesson' || reservation.type === 'mental' || reservation.type === 'lesson_room_rental')) {
         setCancellationToConfirm(reservation);
         setAdminPassword('');
         return;
@@ -522,6 +584,37 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
     return true;
   };
 
+  const isGCQuadAvailable = (slotDate: Date): boolean => {
+    const DURATION = 60; // 60 minutes
+    const now = new Date();
+    if (slotDate < now) return false;
+
+    // Check conflict with other rental bookings (Single GC Quad room assumption)
+    const resourceConflict = reservations.some(r => {
+        if (r.type === 'lesson_room_rental' && r.status === 'scheduled') {
+             const resStart = new Date(r.dateTime);
+             const resEnd = new Date(resStart.getTime() + r.duration * 60000);
+             const slotEnd = new Date(slotDate.getTime() + DURATION * 60000);
+             return (slotDate < resEnd && slotEnd > resStart);
+        }
+        return false;
+    });
+    if (resourceConflict) return false;
+
+    // Check conflict with User's own schedule (Double booking prevention)
+    const userConflict = reservations.some(r => {
+        if (r.memberId === currentUser.id && r.status === 'scheduled') {
+             const resStart = new Date(r.dateTime);
+             const resEnd = new Date(resStart.getTime() + r.duration * 60000);
+             const slotEnd = new Date(slotDate.getTime() + DURATION * 60000);
+             return (slotDate < resEnd && slotEnd > resStart);
+        }
+        return false;
+    });
+    
+    return !userConflict;
+  };
+
   const hasTrainingRoomBookingOnSelectedDate = useMemo(() => {
     if (!currentUser) return false;
     const selectedDateString = selectedDate.toDateString();
@@ -540,7 +633,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
         return (
             <>
                 <h2 className="text-xl font-bold text-white mb-6">예약 종류 선택</h2>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <button 
                       onClick={() => setReservationMode('lesson')}
                       className="flex flex-col items-center justify-center p-8 bg-slate-800 rounded-2xl border-2 border-transparent hover:border-yellow-500 transition-all duration-300 group"
@@ -551,7 +644,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                       >
                         <GolfClubIcon />
                       </motion.div>
-                      <span className="text-2xl font-bold text-white group-hover:text-yellow-400 transition-colors">레슨 예약</span>
+                      <span className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">레슨 예약</span>
                       <span className="text-sm text-slate-400 mt-2">프로님과의 1:1 레슨</span>
                     </button>
 
@@ -565,8 +658,22 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                       >
                          <Brain className="w-20 h-20 mb-6 text-pink-400" />
                       </motion.div>
-                      <span className="text-2xl font-bold text-white group-hover:text-pink-400 transition-colors">멘탈코칭 예약</span>
+                      <span className="text-xl font-bold text-white group-hover:text-pink-400 transition-colors">멘탈코칭 예약</span>
                       <span className="text-sm text-slate-400 mt-2">심리적 안정을 위한 코칭</span>
+                    </button>
+
+                    <button 
+                      onClick={() => setReservationMode('lesson_room_rental')}
+                      className="flex flex-col items-center justify-center p-8 bg-slate-800 rounded-2xl border-2 border-transparent hover:border-orange-500 transition-all duration-300 group"
+                    >
+                      <motion.div 
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                      >
+                         <DoorOpen className="w-20 h-20 mb-6 text-orange-400" />
+                      </motion.div>
+                      <span className="text-xl font-bold text-white group-hover:text-orange-400 transition-colors">GC쿼드 대관</span>
+                      <span className="text-sm text-slate-400 mt-2">60분 / GC쿼드 이용</span>
                     </button>
 
                     <button 
@@ -579,7 +686,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                       >
                          <GolfBallIcon />
                       </motion.div>
-                      <span className="text-2xl font-bold text-white group-hover:text-purple-400 transition-colors">수련의 방 예약</span>
+                      <span className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">수련의 방 예약</span>
                       <span className="text-sm text-slate-400 mt-2">개인 연습 공간 예약</span>
                     </button>
                 </div>
@@ -594,7 +701,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
     
     const isDateRangeValid = selectedDate >= today && selectedDate <= maxDate;
 
-    // Common Instructor Selection UI
+    // Common Instructor Selection UI (Only for Lesson and Mental)
     if ((reservationMode === 'lesson' || reservationMode === 'mental') && !selectedInstructorId) {
         const modeTitle = reservationMode === 'lesson' ? '레슨' : '멘탈코칭';
         const targetList = reservationMode === 'lesson' ? golfInstructors : mentalCoaches;
@@ -612,7 +719,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
         return (
             <div className="text-center p-8">
                 <h3 className="text-lg font-semibold text-white">{modeTitle} 전문가 선택</h3>
-                <p className="text-slate-400 mb-4">{modeTitle}을 진행할 전문가를 선택해주세요.</p>
+                <p className="text-slate-400 mb-4">{`${modeTitle}을 진행할 전문가를 선택해주세요.`}</p>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {targetList.map(inst => (
                         <button
@@ -785,6 +892,60 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
             </>
         );
     }
+
+    if (reservationMode === 'lesson_room_rental') {
+        if (!hasRentalSessions) {
+             return (
+                <div className="text-center p-8">
+                    <p className="text-orange-400 mb-4 text-lg">보유한 대관권이 없습니다.</p>
+                    <p className="text-slate-400 mb-6">'레슨상품'에서 대관권을 구매해주세요.</p>
+                    <Button onClick={resetToSelection} variant="secondary" size="sm">뒤로 가기</Button>
+                </div>
+             );
+        }
+
+        // No instructor selection needed for unified GC Quad rental
+        return (
+            <>
+                <div className="flex items-center justify-center gap-4 mb-4 p-2 bg-slate-800 border border-orange-500/30 rounded-lg">
+                    <Button size="sm" variant="secondary" onClick={() => handleDateChange(-1)}><ChevronLeft size={16}/></Button>
+                    <h3 className="text-lg font-bold text-orange-400 text-center w-48">
+                        {selectedDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
+                    </h3>
+                    <Button size="sm" variant="secondary" onClick={() => handleDateChange(1)}><ChevronRight size={16}/></Button>
+                </div>
+                <div className="flex justify-center items-center gap-2 mb-4">
+                    <Button onClick={resetToSelection} variant="secondary" size="sm">예약 종류 다시 선택</Button>
+                </div>
+                <div className="text-center mb-4">
+                    <p className="text-slate-300 font-bold">GC쿼드(GC Quad) 대관 예약</p>
+                    <p className="text-slate-400 text-sm">60분 단위 예약 / 단독 이용 (잔여 대관권: <span className="text-orange-400 font-bold">{member?.membership.sessions['rentals'] || 0}</span>회)</p>
+                </div>
+                
+                {!isDateRangeValid ? <p className="text-center text-slate-400 p-4">예약은 오늘부터 7일까지만 가능합니다.</p> : (
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                      {availableHours.map(hour => {
+                          const slotDate = new Date(selectedDate);
+                          slotDate.setHours(hour, 0, 0, 0);
+
+                          if (isGCQuadAvailable(slotDate)) {
+                            return (
+                              <Button key={`${hour}:00`} variant="secondary" onClick={() => handleLessonRoomRentalReservation(slotDate)} isLoading={isLoading}>
+                                {`${String(hour).padStart(2, '0')}:00`}
+                              </Button>
+                            );
+                          }
+                          return (
+                            <Button key={`${hour}:00`} disabled>
+                              {`${String(hour).padStart(2, '0')}:00`}
+                            </Button>
+                          );
+                      })}
+                    </div>
+                )}
+            </>
+        );
+    }
     
     if (reservationMode === 'training_room') {
         return (
@@ -832,10 +993,11 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
     return null;
   };
   
-  const filterTabs: { id: 'all' | 'lesson' | 'training_room' | 'mental'; label: string }[] = [
+  const filterTabs: { id: 'all' | 'lesson' | 'training_room' | 'mental' | 'lesson_room_rental'; label: string }[] = [
     { id: 'all', label: '전체' },
     { id: 'lesson', label: '레슨' },
     { id: 'mental', label: '멘탈' },
+    { id: 'lesson_room_rental', label: 'GC쿼드' },
     { id: 'training_room', label: '수련의 방' },
   ];
 
@@ -935,12 +1097,15 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                             {upcomingReservations.map(r => {
                                 const isLesson = r.type === 'lesson';
                                 const isMental = r.type === 'mental';
+                                const isRental = r.type === 'lesson_room_rental';
                                 
                                 let borderColorClass = 'border-l-4 border-purple-500';
                                 if (isLesson) {
                                     borderColorClass = r.duration === 30 ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
                                 } else if (isMental) {
                                     borderColorClass = 'border-l-4 border-pink-500';
+                                } else if (isRental) {
+                                    borderColorClass = 'border-l-4 border-orange-500';
                                 }
                                 
                                 const today = new Date();
@@ -953,7 +1118,7 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
 
                                 let isCancellableByMember = true;
                                 if (currentUser?.role === 'member') {
-                                    if ((isLesson || isMental) && isPastOrToday) {
+                                    if ((isLesson || isMental || isRental) && isPastOrToday) {
                                         isCancellableByMember = false;
                                     }
                                 }
@@ -975,10 +1140,10 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                                                         <span className="flex items-center gap-1.5">
                                                             <span 
                                                                 className="w-2 h-2 rounded-full"
-                                                                style={{ backgroundColor: (isLesson || isMental) ? instructor?.color : '#a855f7' || '#6b7280' }}
+                                                                style={{ backgroundColor: (isLesson || isMental) ? instructor?.color : isRental ? '#f97316' : '#a855f7' || '#6b7280' }}
                                                             ></span>
                                                             <span>
-                                                                {isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : '수련의 방'}
+                                                                {isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : isRental ? 'GC쿼드 대관' : '수련의 방'}
                                                             </span>
                                                         </span>
                                                     </div>
@@ -986,9 +1151,10 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                                                      <span className="flex items-center gap-2">
                                                         {r.memberName}
                                                         {isNew && <span className="px-1.5 py-0.5 text-[10px] font-bold rounded-full bg-red-500 text-white animate-pulse">NEW</span>}
+                                                        {isRental && <span className="text-orange-400 text-xs ml-1">(GC쿼드)</span>}
                                                      </span>
                                                 ) : (
-                                                    isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : '수련의 방'
+                                                    isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : isRental ? 'GC쿼드 대관' : '수련의 방'
                                                 )}
                                             </div>
                                             <p className="text-sm text-slate-300">{formatReservationDateTime(r.dateTime)} ({r.duration}분)</p>
@@ -1028,11 +1194,14 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                             {pastReservations.map(r => {
                                const isLesson = r.type === 'lesson';
                                const isMental = r.type === 'mental';
+                               const isRental = r.type === 'lesson_room_rental';
                                let borderColorClass = 'border-l-4 border-purple-500';
                                if (isLesson) {
                                    borderColorClass = r.duration === 30 ? 'border-l-4 border-green-500' : 'border-l-4 border-blue-500';
                                } else if (isMental) {
                                    borderColorClass = 'border-l-4 border-pink-500';
+                               } else if (isRental) {
+                                   borderColorClass = 'border-l-4 border-orange-500';
                                }
 
                                const today = new Date();
@@ -1054,15 +1223,15 @@ const Reservations: React.FC<ReservationsProps> = ({ reservations, setReservatio
                                                             <span className="flex items-center gap-1.5">
                                                                 <span 
                                                                     className="w-2 h-2 rounded-full"
-                                                                    style={{ backgroundColor: (isLesson || isMental) ? instructor?.color : '#a855f7' || '#6b7280' }}
+                                                                    style={{ backgroundColor: (isLesson || isMental) ? instructor?.color : isRental ? '#f97316' : '#a855f7' || '#6b7280' }}
                                                                 ></span>
-                                                                <span>{isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : '수련의 방'}</span>
+                                                                <span>{isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : isRental ? 'GC쿼드 대관' : '수련의 방'}</span>
                                                             </span>
                                                         </div>
                                                     ) : (isInstructor || isMentalCoach) ? (
                                                         r.memberName
                                                     ) : (
-                                                        isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : '수련의 방'
+                                                        isLesson ? `${r.instructorName} 프로` : isMental ? `${r.instructorName} 멘탈` : isRental ? 'GC쿼드 대관' : '수련의 방'
                                                     )}
                                                 </div>
                                                 <p className="text-sm text-slate-500">{formatReservationDateTime(r.dateTime)} ({r.duration}분)</p>
