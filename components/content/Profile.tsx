@@ -229,6 +229,11 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
           const currentMental = editingUser.membership.sessions['mental'] || 0;
           const currentRentals = editingUser.membership.sessions['rentals'] || 0;
           
+          // Append to existing memo
+          const newMemo = editingUser.memo 
+            ? `${editingUser.memo}\n[추가] ${product.name}` 
+            : `[등록] ${product.name}`;
+
           setEditingUser({
               ...editingUser,
               membership: {
@@ -241,11 +246,11 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                       'rentals': currentRentals + (product.rentalCount || 0)
                   }
               },
-              memo: `등록 상품: ${product.name}`
+              memo: newMemo
           });
           showToast('알림', `${product.name} 정보가 반영되었습니다.`, 'info');
       }
-      // Reset select value to default so same product can be selected again if needed (though unlikely)
+      // Reset select value to default so same product can be selected again if needed
       e.target.value = "";
   };
 
@@ -420,6 +425,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">아이디</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">연락처</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">차량번호</th>
+                <th scope="col" className="px-6 py-3 whitespace-nowrap">가입일</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">메모</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">남은 세션</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이용기간</th>
@@ -438,6 +444,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                       <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.phone}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.licensePlate || '-'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
                       <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate" title={user.memo}>{user.memo || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-xs">
                         {user.role === 'member' ? (
@@ -498,7 +505,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="text-center py-12 text-slate-400">
+                  <td colSpan={10} className="text-center py-12 text-slate-400">
                     {searchTerm ? '검색된 회원이 없습니다.' : '등록된 회원이 없습니다.'}
                   </td>
                 </tr>

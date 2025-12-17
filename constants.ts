@@ -1,3 +1,4 @@
+
 export const STORAGE_KEYS = {
   rememberId: 'turn-up-golf-rememberId',
   users: 'turn-up-golf-users',
@@ -8,6 +9,8 @@ export const STORAGE_KEYS = {
   notifications: 'turn-up-golf-notifications',
   payments: 'turn-up-golf-payments',
   reservations: 'turn-up-golf-reservations',
+  lockers: 'turn-up-golf-lockers',
+  consultations: 'turn-up-golf-consultations',
 };
 
 export const BASE_PRICE_PER_SESSION = 50000; // 50,000 KRW

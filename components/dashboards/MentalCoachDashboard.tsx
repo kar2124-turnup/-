@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../services/api';
@@ -142,6 +143,7 @@ const MentalCoachDashboard: React.FC<MentalCoachDashboardProps> = ({ currentUser
     reservations: '나의 코칭 스케줄',
     notifications: '알림함',
     dashboard: '', home: '', notices: '', price: '', profile: '', instructors: '', users: '',
+    lockers: '', settlement: '', crm: '',
   };
 
   const renderContent = () => {

@@ -144,6 +144,7 @@ const InstructorDashboard: React.FC<InstructorDashboardProps> = ({ currentUser }
     reservations: '나의 예약현황',
     notifications: '알림함',
     dashboard: '', home: '', notices: '', price: '', profile: '', instructors: '', users: '',
+    lockers: '', settlement: '', crm: '',
   };
 
   const renderContent = () => {

@@ -1,6 +1,6 @@
 
 import { STORAGE_KEYS } from '../constants';
-import type { User, Notice, LessonEntry, PriceItem, NotificationItem, Payment, Reservation } from '../types';
+import type { User, Notice, LessonEntry, PriceItem, NotificationItem, Payment, Reservation, Locker, ConsultationLog } from '../types';
 import { generateUUID, nowISO, daysFromNow, calcPackPublicPrice } from '../utils/helpers';
 
 // --- SEED DATA ---
@@ -14,12 +14,27 @@ const seedData = {
     { id: 'user_pigeon', username: '2', name: '비둘기', password: '2', role: 'member', membership: { start: nowISO(), end: daysFromNow(30), sessions: { '30': 5, '50': 5, 'mental': 0, 'rentals': 5 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-2222', memo: '' },
     { id: 'user_eagle', username: '3', name: '독수리', password: '3', role: 'member', membership: { start: nowISO(), end: daysFromNow(-10), sessions: { '30': 0, '50': 0, 'mental': 0, 'rentals': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-3333-3333', memo: '재등록 요망' }, // Expired member
     
-    // New Instructors
-    { id: 'inst_jwoo', username: '11', name: '안진우', password: '11', role: 'instructor', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-0000', color: '#3b82f6', daysOff: [2], oneTimeOff: [], memo: '' }, // Tuesday off
-    { id: 'inst_dhoon', username: '22', name: '김도훈', password: '22', role: 'instructor', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-0000', color: '#22c55e', daysOff: [], oneTimeOff: [], memo: '' },
+    // New Instructors (With Settlement Rates)
+    { 
+      id: 'inst_jwoo', username: '11', name: '안진우', password: '11', role: 'instructor', 
+      membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, 
+      notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-0000', color: '#3b82f6', daysOff: [2], oneTimeOff: [], memo: '',
+      settlementRates: { '30': 15000, '50': 25000, 'mental': 0 } 
+    },
+    { 
+      id: 'inst_dhoon', username: '22', name: '김도훈', password: '22', role: 'instructor', 
+      membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, 
+      notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-0000', color: '#22c55e', daysOff: [], oneTimeOff: [], memo: '',
+      settlementRates: { '30': 15000, '50': 25000, 'mental': 0 } 
+    },
 
-    // Mental Coach
-    { id: 'mental_coach_kim', username: '33', name: '김멘탈', password: '33', role: 'mental_coach', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-3333-0000', color: '#ec4899', daysOff: [], oneTimeOff: [], memo: '' },
+    // Mental Coach (With Settlement Rates)
+    { 
+      id: 'mental_coach_kim', username: '33', name: '김멘탈', password: '33', role: 'mental_coach', 
+      membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 0, '50': 0 } }, 
+      notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-3333-0000', color: '#ec4899', daysOff: [], oneTimeOff: [], memo: '',
+      settlementRates: { '30': 0, '50': 0, 'mental': 30000 }
+    },
   ]),
   getNotices: (users: User[]): Notice[] => ([
     { id: generateUUID(), authorId: users.find(u => u.role === 'admin')?.id || 'admin', title: '7월 정기 휴무 안내', body: '안녕하세요. 7월 15일은 스튜디오 정기 휴무일입니다.', createdAt: daysFromNow(-5) },
@@ -72,6 +87,25 @@ const seedData = {
       { id: generateUUID(), userId: member.id, amount: 450000, productId: 'p1', productName: '50분 10회 레슨', createdAt: daysFromNow(-60), transactionId: 'TX' + generateUUID(), paymentMethod: 'card' },
     ];
   },
+  getLockers: (): Locker[] => {
+    const lockers: Locker[] = [];
+    // Generate 50 lockers
+    for (let i = 1; i <= 50; i++) {
+        const section = i <= 25 ? 'A' : 'B';
+        const isOccupied = i % 5 === 0; // Simulate some usage
+        lockers.push({
+            id: `locker_${i}`,
+            number: i,
+            section: section,
+            status: isOccupied ? 'occupied' : 'available',
+            userId: isOccupied ? 'user_sparrow' : undefined,
+            userName: isOccupied ? '참새' : undefined,
+            startDate: isOccupied ? daysFromNow(-30) : undefined,
+            endDate: isOccupied ? daysFromNow(60) : undefined,
+        });
+    }
+    return lockers;
+  }
 };
 
 // Helper functions for localStorage
@@ -108,7 +142,9 @@ const _initData = () => {
     _setData(STORAGE_KEYS.lessons, seedData.getLessons(users));
     _setData(STORAGE_KEYS.reservations, seedData.getReservations(users));
     _setData(STORAGE_KEYS.payments, seedData.getPayments(users));
+    _setData(STORAGE_KEYS.lockers, seedData.getLockers());
     _setData(STORAGE_KEYS.notifications, []);
+    _setData(STORAGE_KEYS.consultations, []);
 };
 _initData();
 
@@ -994,6 +1030,111 @@ const updateReservationStatus = async (reservationId: string, status: 'attended'
     return reservations;
 };
 
+// --- LOCKER API ---
+const getLockers = async (): Promise<Locker[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    return _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
+};
+
+const assignLocker = async (lockerId: string, userId: string, months: number): Promise<Locker[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    let lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
+    const users = _getData<User[]>(STORAGE_KEYS.users) || [];
+    const user = users.find(u => u.id === userId);
+    if (!user) throw new Error('회원을 찾을 수 없습니다.');
+
+    const startDate = new Date();
+    const endDate = new Date(startDate);
+    endDate.setMonth(endDate.getMonth() + months);
+
+    lockers = lockers.map(locker => {
+        if (locker.id === lockerId) {
+            return {
+                ...locker,
+                status: 'occupied',
+                userId: user.id,
+                userName: user.name,
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString(),
+            };
+        }
+        return locker;
+    });
+    _setData(STORAGE_KEYS.lockers, lockers);
+    return lockers;
+};
+
+const releaseLocker = async (lockerId: string): Promise<Locker[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    let lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
+    lockers = lockers.map(locker => {
+        if (locker.id === lockerId) {
+            return {
+                ...locker,
+                status: 'available',
+                userId: undefined,
+                userName: undefined,
+                startDate: undefined,
+                endDate: undefined,
+            };
+        }
+        return locker;
+    });
+    _setData(STORAGE_KEYS.lockers, lockers);
+    return lockers;
+};
+
+// --- CRM / CONSULTATIONS API ---
+const getConsultations = async (): Promise<ConsultationLog[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    return _getData<ConsultationLog[]>(STORAGE_KEYS.consultations) || [];
+};
+
+const createConsultationImpl = async (data: { 
+    memberId?: string, 
+    memberName?: string, // Explicitly allowed for non-members
+    clientPhone?: string,
+    adminId: string, 
+    content: string, 
+    type: 'inquiry' | 'complaint' | 'sales' | 'general' 
+}): Promise<ConsultationLog[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    let logs = _getData<ConsultationLog[]>(STORAGE_KEYS.consultations) || [];
+    
+    let finalMemberName = data.memberName || '비회원';
+
+    if (data.memberId) {
+        const users = _getData<User[]>(STORAGE_KEYS.users) || [];
+        const member = users.find(u => u.id === data.memberId);
+        if (member) {
+            finalMemberName = member.name;
+        }
+    }
+
+    const newLog: ConsultationLog = {
+        id: generateUUID(),
+        memberId: data.memberId, // Can be undefined
+        memberName: finalMemberName,
+        clientPhone: data.clientPhone,
+        adminId: data.adminId,
+        content: data.content,
+        type: data.type,
+        createdAt: nowISO(),
+    };
+    logs = [newLog, ...logs];
+    _setData(STORAGE_KEYS.consultations, logs);
+    return logs;
+};
+
+
+const deleteConsultation = async (id: string): Promise<ConsultationLog[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    let logs = _getData<ConsultationLog[]>(STORAGE_KEYS.consultations) || [];
+    logs = logs.filter(log => log.id !== id);
+    _setData(STORAGE_KEYS.consultations, logs);
+    return logs;
+};
+
 export const api = {
     login,
     logout,
@@ -1027,4 +1168,10 @@ export const api = {
     createReservation,
     deleteReservation,
     updateReservationStatus,
+    getLockers,
+    assignLocker,
+    releaseLocker,
+    getConsultations,
+    createConsultation: createConsultationImpl, // Use the improved implementation
+    deleteConsultation,
 };

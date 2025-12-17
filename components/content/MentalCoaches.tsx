@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -71,6 +72,7 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
       color: '#ec4899', // Pinkish for mental coaches
       daysOff: [],
       oneTimeOff: [],
+      memo: '',
     };
     setEditingUser(newUserTemplate);
     setPassword('');
@@ -169,6 +171,24 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
     }
   };
 
+  const getModalContent = () => {
+    if (!actionToConfirm) return { title: '', description: '' };
+    if (actionToConfirm.type === 'save') {
+        return {
+            title: '관리자 확인',
+            description: '변경사항을 저장하려면 관리자 비밀번호를 입력하세요.'
+        };
+    }
+    if (actionToConfirm.type === 'delete' && actionToConfirm.userToDelete) {
+        const user = actionToConfirm.userToDelete;
+        return {
+            title: '코치 삭제 확인',
+            description: `정말로 ${user.name} (${user.username}) 코치를 삭제하시겠습니까?`
+        };
+    }
+    return { title: '', description: '' };
+  };
+
   return (
     <>
       <AnimatePresence>
@@ -217,6 +237,16 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
                           placeholder="#ec4899"
                       />
                   </div>
+                </div>
+
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">메모/기타사항</label>
+                    <Textarea 
+                        value={editingUser.memo || ''} 
+                        onChange={e => handleFieldChange('memo', e.target.value)} 
+                        placeholder="특이사항을 입력하세요."
+                        rows={3}
+                    />
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-slate-700">
@@ -280,6 +310,7 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이름</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">아이디</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">연락처</th>
+                <th scope="col" className="px-6 py-3 whitespace-nowrap">메모</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">등록일</th>
                 <th scope="col" className="px-6 py-3 text-right whitespace-nowrap">관리</th>
               </tr>
@@ -296,6 +327,7 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{user.phone}</td>
+                    <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate" title={user.memo}>{user.memo || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right relative whitespace-nowrap">
                        <Button
@@ -360,9 +392,9 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
                     className="bg-slate-800 border border-slate-700 rounded-2xl p-8 shadow-2xl w-full max-w-md"
                 >
                     <form onSubmit={handleConfirmAction}>
-                        <h2 className="text-lg font-bold text-white mb-2">관리자 확인</h2>
+                        <h2 className="text-lg font-bold text-white mb-2">{getModalContent().title}</h2>
                         <p className="text-slate-300 mb-4 whitespace-pre-wrap">
-                           변경사항을 저장하려면 관리자 비밀번호를 입력하세요.
+                           {getModalContent().description}
                         </p>
                         <div className="mb-6">
                             <label className="block text-sm font-medium text-slate-300 mb-1">관리자 비밀번호 확인</label>

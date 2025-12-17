@@ -14,6 +14,9 @@ import PriceList from '../content/PriceList';
 import Reservations from '../content/Reservations';
 import UserManagement from '../content/UserManagement';
 import NotificationsPage from '../content/NotificationsPage';
+import Lockers from '../content/Lockers'; 
+import Settlement from '../content/Settlement'; 
+import Consultations from '../content/Consultations'; // New Import
 import PasswordChangeModal from '../PasswordChangeModal';
 import { useLocalState } from '../../hooks/useLocalState';
 
@@ -105,10 +108,6 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
                 } else if (res?.type === 'mental') {
                     counts.unreadMentalReservationsCount++;
                 }
-                // Lesson room rental notifications can be grouped or counted separately.
-                // Currently, they might not increment these specific counters unless we add another one or group them.
-                // For simplicity, let's group them with 'Lesson' or just handle general reservation notifications in the total count.
-                // Given the existing structure, they will contribute to the total 'reservations' tab badge if we sum them up in the TABS definition.
             }
         }
     });
@@ -212,6 +211,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
     { id: 'dashboard', label: '대시보드', unreadCount: unreadPaymentsCount },
     { id: 'reservations', label: '예약관리', unreadCount: totalUnreadReservations },
     { id: 'lessons', label: '레슨일지' },
+    { id: 'lockers', label: '락커관리' }, 
+    { id: 'crm', label: '상담일지' }, // New
+    { id: 'settlement', label: '강사정산' },
     { id: 'notices', label: '공지사항' },
     { id: 'users', label: '통합 회원관리' },
     { id: 'price', label: '상품관리' },
@@ -229,6 +231,9 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
     instructors: '프로 관리',
     notifications: '관리자 알림함',
     users: '통합 회원 관리',
+    lockers: '락커 관리',
+    settlement: '강사료 정산',
+    crm: '회원 상담 관리'
   };
 
   const renderContent = () => {
@@ -248,6 +253,12 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
         return <PriceList prices={prices} setPrices={setPrices} />;
       case 'users':
         return <UserManagement onImpersonate={impersonateSession} payments={payments} prices={prices} />;
+      case 'lockers':
+        return <Lockers />;
+      case 'settlement':
+        return <Settlement users={users} reservations={reservations} />;
+      case 'crm':
+        return <Consultations />;
       case 'notifications':
         return <NotificationsPage notifications={sortedNotifications} updateCurrentUser={updateCurrentUser} onMarkAllAsRead={markAllAsRead} onNotificationClick={handleNotificationClick} />;
       default:

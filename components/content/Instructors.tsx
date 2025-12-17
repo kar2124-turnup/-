@@ -7,6 +7,7 @@ import { api } from '../../services/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
+import { Textarea } from '../ui/Textarea';
 import { AnimatePresence, motion } from 'framer-motion';
 import { X } from 'lucide-react';
 
@@ -71,6 +72,7 @@ const Instructors: React.FC<InstructorsProps> = ({ onImpersonate }) => {
       color: '#ef4444',
       daysOff: [],
       oneTimeOff: [],
+      memo: '',
     };
     setEditingUser(newUserTemplate);
     setPassword('');
@@ -237,6 +239,16 @@ const Instructors: React.FC<InstructorsProps> = ({ onImpersonate }) => {
                   </div>
                 </div>
 
+                <div>
+                    <label className="block text-sm font-medium text-slate-300 mb-1">메모/기타사항</label>
+                    <Textarea 
+                        value={editingUser.memo || ''} 
+                        onChange={e => handleFieldChange('memo', e.target.value)} 
+                        placeholder="특이사항을 입력하세요."
+                        rows={3}
+                    />
+                </div>
+
                 <div className="space-y-4 pt-4 border-t border-slate-700">
                   <div>
                       <label className="block text-sm font-medium text-slate-300 mb-2">정기 휴무 요일</label>
@@ -298,6 +310,7 @@ const Instructors: React.FC<InstructorsProps> = ({ onImpersonate }) => {
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이름</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">아이디</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">연락처</th>
+                <th scope="col" className="px-6 py-3 whitespace-nowrap">메모</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">등록일</th>
                 <th scope="col" className="px-6 py-3 text-right whitespace-nowrap">관리</th>
               </tr>
@@ -314,6 +327,7 @@ const Instructors: React.FC<InstructorsProps> = ({ onImpersonate }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{user.phone}</td>
+                    <td className="px-6 py-4 whitespace-nowrap max-w-xs truncate" title={user.memo}>{user.memo || '-'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">{new Date(user.createdAt).toLocaleDateString()}</td>
                     <td className="px-6 py-4 text-right relative whitespace-nowrap">
                        <Button
