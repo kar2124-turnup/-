@@ -50,7 +50,7 @@ const Lockers: React.FC = () => {
         setSelectedMemberId('');
         const today = new Date().toISOString().split('T')[0];
         setStartDate(today);
-        setEndDate(''); // 초기화 (사용자가 버튼을 눌러 추가하도록 유도)
+        setEndDate(''); // 초기화
         
         setViewStep('initial');
     };
@@ -61,7 +61,7 @@ const Lockers: React.FC = () => {
         // 이미 종료일이 설정되어 있다면 그 날짜를 기준으로 추가 (누적)
         if (endDate) {
             const currentEnd = new Date(endDate);
-            // 종료일이 시작일보다 이전인 이상한 상태라면 시작일 기준
+            // 종료일이 유효하고 시작일보다 같거나 클 때만 기준으로 삼음
             if (!isNaN(currentEnd.getTime()) && currentEnd >= baseDate) {
                 baseDate = currentEnd;
             }
@@ -311,7 +311,7 @@ const Lockers: React.FC = () => {
                                                         </button>
                                                     ))}
                                                 </div>
-                                                <p className="text-[10px] text-slate-500 mt-1 text-right">* 버튼을 누를 때마다 기간이 더해집니다.</p>
+                                                <p className="text-[10px] text-slate-500 mt-1 text-right">* 버튼을 누를 때마다 종료일이 누적되어 연장됩니다.</p>
                                             </div>
                                             <Button onClick={handlePreAssign} disabled={!selectedMemberId} className="w-full mt-4">
                                                 다음 단계

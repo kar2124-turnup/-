@@ -248,7 +248,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
     { id: 'reservations', label: '예약관리', unreadCount: totalUnreadReservations },
     { id: 'lessons', label: '레슨일지' },
     { id: 'crm', label: '상담일지' },
-    { id: 'users', label: '통합 회원관리' },
+    { id: 'users', label: '통합회원관리' },
     { id: 'price', label: '상품관리' },
     { id: 'lockers', label: '락커관리' },
     { id: 'settlement', label: '강사매출' },
