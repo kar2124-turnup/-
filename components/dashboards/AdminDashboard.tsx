@@ -27,6 +27,7 @@ interface AdminDashboardProps {
 const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
   const { users, setUsers, updateCurrentUser, impersonateSession } = useAuth();
   const { showToast } = useToast();
+  const confirm = useConfirmation();
   const [activeTab, setActiveTab] = useLocalState<TurnUpTab>('turn-up-golf-admin-active-tab', 'dashboard');
 
   const [notices, setNotices] = useState<Notice[]>([]);
@@ -166,6 +167,40 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
     }
   };
 
+  const handleDeleteSelected = async (selectedIds: Set<string>) => {
+    if (selectedIds.size === 0) return;
+    const isConfirmed = await confirm(`${selectedIds.size}개의 알림을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`);
+    if (isConfirmed) {
+        try {
+            const updatedUser = await api.deleteNotificationsForUser(currentUser.id, Array.from(selectedIds));
+            if (updatedUser) {
+                updateCurrentUser(updatedUser);
+                setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+            }
+            showToast('성공', `${selectedIds.size}개의 알림이 삭제되었습니다.`, 'success');
+        } catch (error) {
+            showToast('오류', '알림 삭제 중 오류가 발생했습니다.', 'error');
+        }
+    }
+  };
+
+  const handleDeleteAll = async (allVisibleIds: string[]) => {
+      if (allVisibleIds.length === 0) return;
+      const isConfirmed = await confirm(`모든 알림(${allVisibleIds.length}개)을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`);
+      if (isConfirmed) {
+          try {
+              const updatedUser = await api.deleteNotificationsForUser(currentUser.id, allVisibleIds);
+              if (updatedUser) {
+                  updateCurrentUser(updatedUser);
+                  setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+              }
+              showToast('성공', '모든 알림이 삭제되었습니다.', 'success');
+          } catch (error) {
+              showToast('오류', '알림 삭제 중 오류가 발생했습니다.', 'error');
+          }
+      }
+  };
+
   const handlePasswordChange = async (currentPassword: string, newPassword: string) => {
     try {
       const updatedUser = await api.changePassword(currentUser.id, currentPassword, newPassword);
@@ -209,14 +244,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
 
   const TABS: { id: TurnUpTab; label: string; unreadCount?: number }[] = [
     { id: 'dashboard', label: '대시보드', unreadCount: unreadPaymentsCount },
+    { id: 'notices', label: '공지사항' },
     { id: 'reservations', label: '예약관리', unreadCount: totalUnreadReservations },
     { id: 'lessons', label: '레슨일지' },
-    { id: 'lockers', label: '락커관리' }, 
-    { id: 'crm', label: '상담일지' }, // New
-    { id: 'settlement', label: '강사정산' },
-    { id: 'notices', label: '공지사항' },
+    { id: 'crm', label: '상담일지' },
     { id: 'users', label: '통합 회원관리' },
     { id: 'price', label: '상품관리' },
+    { id: 'lockers', label: '락커관리' },
+    { id: 'settlement', label: '강사매출' },
     { id: 'notifications', label: '알림함', unreadCount },
   ];
   
@@ -232,7 +267,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
     notifications: '관리자 알림함',
     users: '통합 회원 관리',
     lockers: '락커 관리',
-    settlement: '강사료 정산',
+    settlement: '강사매출 관리',
     crm: '회원 상담 관리'
   };
 
@@ -260,7 +295,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ currentUser }) => {
       case 'crm':
         return <Consultations />;
       case 'notifications':
-        return <NotificationsPage notifications={sortedNotifications} updateCurrentUser={updateCurrentUser} onMarkAllAsRead={markAllAsRead} onNotificationClick={handleNotificationClick} />;
+        return <NotificationsPage 
+            notifications={sortedNotifications} 
+            updateCurrentUser={updateCurrentUser} 
+            onMarkAllAsRead={markAllAsRead} 
+            onNotificationClick={handleNotificationClick} 
+            onDeleteSelected={handleDeleteSelected}
+            onDeleteAll={handleDeleteAll}
+        />;
       default:
         return null;
     }

@@ -943,7 +943,7 @@ const deleteReservation = async (id: string, cancellerId: string, adminPassword?
             _addNotification({ userId: member.id, title: '예약 취소 알림', body: `[예약 취소] ${reservationTime} ${facilityName} 예약이 취소되었습니다. ${refundMsg}`, type: 'reservation', refId: reservationToDelete.id });
         }
         if (instructor) {
-            _addNotification({ userId: instructor.id, title: '예약 취소됨', body: `${member?.name ?? '회원'}님이 ${reservationTime} 예약을 취소했습니다.`, type: 'reservation', refId: reservationToDelete.id });
+            _addNotification({ userId: instructor.id, title: '예약 취소됨', body: `${member?.name ?? '회원'}님의 ${reservationTime} 예약을 취소했습니다.`, type: 'reservation', refId: reservationToDelete.id });
         }
     } else { // Canceller is admin or instructor
         if (member && !isPastLesson) {
@@ -1036,16 +1036,12 @@ const getLockers = async (): Promise<Locker[]> => {
     return _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
 };
 
-const assignLocker = async (lockerId: string, userId: string, months: number): Promise<Locker[]> => {
+const assignLocker = async (lockerId: string, userId: string, startDate: string, endDate: string): Promise<Locker[]> => {
     await new Promise(res => setTimeout(res, DELAY));
     let lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
     const users = _getData<User[]>(STORAGE_KEYS.users) || [];
     const user = users.find(u => u.id === userId);
     if (!user) throw new Error('회원을 찾을 수 없습니다.');
-
-    const startDate = new Date();
-    const endDate = new Date(startDate);
-    endDate.setMonth(endDate.getMonth() + months);
 
     lockers = lockers.map(locker => {
         if (locker.id === lockerId) {
@@ -1054,8 +1050,8 @@ const assignLocker = async (lockerId: string, userId: string, months: number): P
                 status: 'occupied',
                 userId: user.id,
                 userName: user.name,
-                startDate: startDate.toISOString(),
-                endDate: endDate.toISOString(),
+                startDate: startDate,
+                endDate: endDate,
             };
         }
         return locker;

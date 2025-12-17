@@ -4,7 +4,7 @@ import type { Payment, PriceItem } from '../../types';
 import Profile from './Profile';
 import Instructors from './Instructors';
 import MentalCoaches from './MentalCoaches';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface UserManagementProps {
   onImpersonate: (userId: string) => void;
@@ -18,7 +18,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ onImpersonate, payments
   const [activeFilter, setActiveFilter] = useState<UserFilter>('member');
 
   return (
-    <div>
+    <div className="min-h-[500px]">
        <div className="mb-6 flex justify-center">
             <div className="p-1 bg-slate-800 rounded-full flex items-center w-full max-w-lg border border-slate-700 overflow-x-auto">
               {(['member', 'instructor', 'mental_coach'] as const).map((filter) => (
@@ -46,15 +46,39 @@ const UserManagement: React.FC<UserManagementProps> = ({ onImpersonate, payments
             </div>
         </div>
 
-        {activeFilter === 'member' && (
-            <Profile onImpersonate={onImpersonate} payments={payments} prices={prices} />
-        )}
-        {activeFilter === 'instructor' && (
-            <Instructors onImpersonate={onImpersonate} />
-        )}
-        {activeFilter === 'mental_coach' && (
-            <MentalCoaches onImpersonate={onImpersonate} />
-        )}
+        <AnimatePresence mode="wait">
+            {activeFilter === 'member' ? (
+                <motion.div
+                    key="member"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <Profile onImpersonate={onImpersonate} payments={payments} prices={prices} />
+                </motion.div>
+            ) : activeFilter === 'instructor' ? (
+                <motion.div
+                    key="instructor"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <Instructors onImpersonate={onImpersonate} />
+                </motion.div>
+            ) : (
+                <motion.div
+                    key="mental_coach"
+                    initial={{ opacity: 0, y: 5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    transition={{ duration: 0.2 }}
+                >
+                    <MentalCoaches onImpersonate={onImpersonate} />
+                </motion.div>
+            )}
+        </AnimatePresence>
     </div>
   );
 };
