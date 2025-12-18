@@ -298,7 +298,7 @@ const Instructors: React.FC<InstructorsProps> = ({ onImpersonate }) => {
         )}
       </AnimatePresence>
 
-      <Card>
+      <Card initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">프로 목록</h2>
             <Button onClick={handleAddNew}>신규 프로 등록</Button>

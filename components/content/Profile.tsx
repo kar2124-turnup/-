@@ -77,7 +77,6 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
         sessions: { '30': 0, '50': 0, 'mental': 0, 'rentals': 0 },
       },
       notificationsRead: {},
-      // Fix: Added missing 'notificationsDeleted' property to satisfy the User type.
       notificationsDeleted: {},
       createdAt: '',
       memo: '',
@@ -250,7 +249,6 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
           });
           showToast('알림', `${product.name} 정보가 반영되었습니다.`, 'info');
       }
-      // Reset select value to default so same product can be selected again if needed
       e.target.value = "";
   };
 
@@ -276,21 +274,21 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
     if (actionToConfirm.type === 'delete' && actionToConfirm.userToDelete) {
         const user = actionToConfirm.userToDelete;
         return {
-            title: '회원 삭제 확인',
-            description: `정말로 ${user.name} (${user.username}) 회원을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 모든 관련 데이터(레슨, 결제 내역 등)가 삭제됩니다.`
+            title: '계정 삭제 확인',
+            description: `정말로 ${user.name} (${user.username}, 등급: ${user.role}) 계정을 삭제하시겠습니까? 이 작업은 되돌릴 수 없으며, 모든 관련 데이터가 삭제됩니다.`
         };
     }
     return { title: '', description: '' };
   };
 
   const filteredUsers = useMemo(() => {
-    // Only show 'member' role users. Hide 'instructor', 'mental_coach', and 'admin'.
-    const members = users.filter(user => user.role === 'member');
+    // Include both members and admins in the management list so master admin can manage/delete temporary admins.
+    const targets = users.filter(user => user.role === 'member' || user.role === 'admin');
     if (!searchTerm.trim()) {
-      return members;
+      return targets;
     }
     const lowercasedFilter = searchTerm.trim().toLowerCase();
-    return members.filter(user => 
+    return targets.filter(user => 
       user.name.toLowerCase().includes(lowercasedFilter) || 
       user.username.toLowerCase().includes(lowercasedFilter) ||
       (user.licensePlate && user.licensePlate.toLowerCase().includes(lowercasedFilter))
@@ -304,7 +302,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
           <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <Card className="mb-6">
               <h3 className="text-lg font-bold text-white mb-4">
-                {editingUser.id ? `회원 정보 수정: ${editingUser.name}` : '신규 회원 등록'}
+                {editingUser.id ? `계정 정보 수정: ${editingUser.name}` : '신규 계정 등록'}
               </h3>
               <form onSubmit={handleSave} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -332,7 +330,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">등급</label>
-                    <Select value={editingUser.role} onChange={e => handleFieldChange('role', e.target.value)}>
+                    <Select value={editingUser.role} onChange={e => handleFieldChange('role', e.target.value as any)}>
                         <option value="member">member</option>
                         <option value="admin">admin</option>
                     </Select>
@@ -401,9 +399,9 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
         )}
       </AnimatePresence>
 
-      <Card>
+      <Card initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex flex-col md:flex-row justify-between md:items-center mb-4 gap-4">
-            <h2 className="text-xl font-bold text-white">회원 목록</h2>
+            <h2 className="text-xl font-bold text-white">전체 사용자 목록</h2>
             <div className="flex items-center gap-2">
                 <div className="relative w-full md:w-auto">
                     <Input 
@@ -414,7 +412,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                     />
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                 </div>
-                <Button onClick={handleAddNew} className="flex-shrink-0">신규 회원 등록</Button>
+                <Button onClick={handleAddNew} className="flex-shrink-0">신규 등록</Button>
             </div>
         </div>
         <div className="overflow-x-auto">
@@ -423,6 +421,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
               <tr>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">이름</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">아이디</th>
+                <th scope="col" className="px-6 py-3 whitespace-nowrap">등급</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">연락처</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">차량번호</th>
                 <th scope="col" className="px-6 py-3 whitespace-nowrap">가입일</th>
@@ -439,9 +438,13 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                   const days = daysUntil(user.membership.end);
                   const status = days < 0 ? '만료' : '이용중';
                   return (
-                    <tr key={user.id} className="border-b border-slate-700 hover:bg-slate-800/50">
-                      <td className="px-6 py-4 font-medium text-white whitespace-nowrap">{user.name}</td>
+                    <tr key={user.id} className={`border-b border-slate-700 hover:bg-slate-800/50 ${user.role === 'admin' ? 'bg-yellow-500/5' : ''}`}>
+                      <td className="px-6 py-4 font-medium text-white whitespace-nowrap">
+                          {user.name}
+                          {user.role === 'admin' && <span className="ml-2 text-[10px] bg-yellow-500 text-slate-900 px-1 rounded">ADMIN</span>}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.username}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-xs text-slate-400">{user.role}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.phone}</td>
                       <td className="px-6 py-4 whitespace-nowrap">{user.licensePlate || '-'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-slate-400">{new Date(user.createdAt).toLocaleDateString()}</td>
@@ -455,7 +458,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                                 <span className="text-slate-300">대관: <span className="text-orange-400 font-bold">{user.membership.sessions['rentals'] || 0}</span>회</span>
                             </div>
                         ) : (
-                            '-'
+                            '무제한'
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">{new Date(user.membership.end).toLocaleDateString()}</td>
@@ -482,7 +485,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                               <ul className="text-sm text-slate-200">
                                 <li>
                                   <button onClick={() => { onImpersonate(user.id); setOpenDropdownId(null); }} className="w-full text-left px-3 py-2 hover:bg-slate-600 transition-colors rounded-t-md">
-                                    회원 보기
+                                    사용자 보기
                                   </button>
                                 </li>
                                 <li>
@@ -492,7 +495,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                                 </li>
                                 <li>
                                   <button onClick={() => { handleDeleteClick(user); setOpenDropdownId(null); }} className="w-full text-left px-3 py-2 text-red-400 hover:bg-slate-600 transition-colors rounded-b-md">
-                                    회원 삭제
+                                    계정 삭제
                                   </button>
                                 </li>
                               </ul>
@@ -505,8 +508,8 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
                 })
               ) : (
                 <tr>
-                  <td colSpan={10} className="text-center py-12 text-slate-400">
-                    {searchTerm ? '검색된 회원이 없습니다.' : '등록된 회원이 없습니다.'}
+                  <td colSpan={11} className="text-center py-12 text-slate-400">
+                    {searchTerm ? '검색된 사용자가 없습니다.' : '등록된 사용자가 없습니다.'}
                   </td>
                 </tr>
               )}
@@ -560,7 +563,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
   const renderMemberView = () => (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       <div className="lg:col-span-1">
-          <Card>
+          <Card initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
               <h2 className="text-xl font-bold text-white mb-4">내 정보</h2>
               <div className="space-y-3 text-slate-300">
                   <p><strong>이름:</strong> {currentUser?.name}</p>
@@ -571,7 +574,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
           </Card>
       </div>
       <div className="lg:col-span-2">
-        <Card>
+        <Card initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
           <h2 className="text-xl font-bold text-white mb-4">멤버십 정보</h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="space-y-4 col-span-3">
@@ -601,7 +604,7 @@ const Profile: React.FC<ProfileProps> = ({ onImpersonate, payments, prices }) =>
               </div>
           </div>
         </Card>
-        <Card className="mt-6">
+        <Card className="mt-6" initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
           <h2 className="text-xl font-bold text-white mb-4">구매내역</h2>
           {userPayments.length > 0 ? (
             <ul className="divide-y divide-slate-700">

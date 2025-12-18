@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from '../components/ui/Button';
@@ -52,7 +53,7 @@ export const ConfirmationProvider: React.FC<{ children: React.ReactNode }> = ({ 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-[9998] p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-[10000] p-4"
           >
             <motion.div
               initial={{ opacity: 0, scale: 0.8 }}

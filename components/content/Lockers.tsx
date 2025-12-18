@@ -9,15 +9,22 @@ import { useAuth } from '../../hooks/useAuth';
 import { Select } from '../ui/Select';
 import { Input } from '../ui/Input';
 import { AnimatePresence, motion } from 'framer-motion';
-import { User as UserIcon, Calendar, Check, X, ArrowLeft, AlertTriangle } from 'lucide-react';
+import { User as UserIcon, Calendar, Check, X, ArrowLeft, AlertTriangle, Plus, Trash2 } from 'lucide-react';
+import { useConfirmation } from '../../contexts/ConfirmationContext';
 
 const Lockers: React.FC = () => {
     const { users } = useAuth();
     const { showToast } = useToast();
+    const confirm = useConfirmation();
     const [lockers, setLockers] = useState<Locker[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     
-    // Modal State
+    // Add Locker Modal State
+    const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+    const [newLockerNumber, setNewLockerNumber] = useState<number | ''>('');
+    const [newLockerSection, setNewLockerSection] = useState('A');
+
+    // Detail/Assign Modal State
     const [selectedLocker, setSelectedLocker] = useState<Locker | null>(null);
     
     // Assignment Form State
@@ -129,6 +136,53 @@ const Lockers: React.FC = () => {
         }
     };
 
+    // --- Add Locker Logic ---
+    const handleAddLocker = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newLockerNumber || !newLockerSection) {
+            showToast('오류', '번호와 구역을 모두 입력해주세요.', 'error');
+            return;
+        }
+
+        setIsLoading(true);
+        try {
+            const updatedLockers = await api.createLocker({ number: Number(newLockerNumber), section: newLockerSection });
+            setLockers(updatedLockers);
+            showToast('성공', '새 락커가 추가되었습니다.', 'success');
+            setIsAddModalOpen(false);
+            setNewLockerNumber('');
+            setNewLockerSection('A');
+        } catch (error) {
+            showToast('오류', (error as Error).message, 'error');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- Delete Locker Logic ---
+    const handleDeleteLocker = async () => {
+        if (!selectedLocker) return;
+        if (selectedLocker.status === 'occupied') {
+            showToast('오류', '사용 중인 락커는 삭제할 수 없습니다.', 'error');
+            return;
+        }
+
+        const isConfirmed = await confirm(`${selectedLocker.number}번 락커를 영구 삭제하시겠습니까?`);
+        if (isConfirmed) {
+            setIsLoading(true);
+            try {
+                const updatedLockers = await api.deleteLocker(selectedLocker.id);
+                setLockers(updatedLockers);
+                showToast('성공', '락커가 삭제되었습니다.', 'success');
+                setSelectedLocker(null);
+            } catch (error) {
+                showToast('오류', (error as Error).message, 'error');
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+
     const members = users.filter(u => u.role === 'member');
     const sections = Array.from(new Set(lockers.map(l => l.section))).sort();
     
@@ -139,18 +193,29 @@ const Lockers: React.FC = () => {
         <Card>
             <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-bold text-white">락커 관리</h2>
-                <div className="flex gap-4 text-sm">
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-700 rounded-sm"></div> 사용가능</div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-600 rounded-sm"></div> 사용중</div>
-                    <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> 만료/임박</div>
+                <div className="flex items-center gap-4">
+                    <div className="hidden sm:flex gap-4 text-sm mr-4">
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-slate-700 rounded-sm"></div> 사용가능</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-blue-600 rounded-sm"></div> 사용중</div>
+                        <div className="flex items-center gap-2"><div className="w-3 h-3 bg-red-500 rounded-sm"></div> 만료/임박</div>
+                    </div>
+                    <Button onClick={() => setIsAddModalOpen(true)} size="sm">
+                        <Plus size={16} className="mr-1" /> 락커 추가
+                    </Button>
                 </div>
             </div>
+
+            {sections.length === 0 && (
+                <div className="text-center py-12 text-slate-400">
+                    등록된 락커가 없습니다. 락커를 추가해주세요.
+                </div>
+            )}
 
             {sections.map(section => (
                 <div key={section} className="mb-8">
                     <h3 className="text-lg font-semibold text-slate-300 mb-4">{section} 구역</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-8 gap-3">
-                        {lockers.filter(l => l.section === section).map(locker => {
+                        {lockers.filter(l => l.section === section).sort((a,b) => a.number - b.number).map(locker => {
                             const isOccupied = locker.status === 'occupied';
                             const isExpired = locker.endDate && new Date(locker.endDate) < new Date();
                             
@@ -182,6 +247,55 @@ const Lockers: React.FC = () => {
             ))}
 
             <AnimatePresence>
+                {/* Add Locker Modal */}
+                {isAddModalOpen && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 bg-black/70 backdrop-blur-sm flex justify-center items-center z-[9999] p-4"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9 }}
+                            animate={{ scale: 1 }}
+                            exit={{ scale: 0.9 }}
+                            className="bg-slate-800 p-6 rounded-xl w-full max-w-sm border border-slate-700 shadow-2xl"
+                        >
+                            <div className="flex justify-between items-center mb-6">
+                                <h3 className="text-xl font-bold text-white">락커 추가</h3>
+                                <button onClick={() => setIsAddModalOpen(false)} className="text-slate-400 hover:text-white"><X /></button>
+                            </div>
+                            <form onSubmit={handleAddLocker} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">락커 번호</label>
+                                    <Input 
+                                        type="number" 
+                                        value={newLockerNumber} 
+                                        onChange={e => setNewLockerNumber(Number(e.target.value))} 
+                                        placeholder="예: 101"
+                                        required 
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-300 mb-1">구역 (Section)</label>
+                                    <Input 
+                                        type="text" 
+                                        value={newLockerSection} 
+                                        onChange={e => setNewLockerSection(e.target.value.toUpperCase())} 
+                                        placeholder="예: A"
+                                        required 
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-2 mt-6">
+                                    <Button type="button" variant="secondary" onClick={() => setIsAddModalOpen(false)}>취소</Button>
+                                    <Button type="submit" isLoading={isLoading}>추가</Button>
+                                </div>
+                            </form>
+                        </motion.div>
+                    </motion.div>
+                )}
+
+                {/* Detail / Action Modal */}
                 {selectedLocker && (
                     <motion.div
                         initial={{ opacity: 0 }}
@@ -202,7 +316,18 @@ const Lockers: React.FC = () => {
                                     <h3 className="text-2xl font-bold text-white">{selectedLocker.number}번 락커</h3>
                                     <p className="text-slate-400">{selectedLocker.section} 구역</p>
                                 </div>
-                                <button onClick={() => setSelectedLocker(null)} className="text-slate-400 hover:text-white"><X /></button>
+                                <div className="flex items-center gap-3">
+                                    {selectedLocker.status !== 'occupied' && (
+                                        <button 
+                                            onClick={handleDeleteLocker} 
+                                            className="text-red-500 hover:text-red-400 p-1 rounded-full hover:bg-slate-700 transition-colors"
+                                            title="락커 삭제"
+                                        >
+                                            <Trash2 size={20} />
+                                        </button>
+                                    )}
+                                    <button onClick={() => setSelectedLocker(null)} className="text-slate-400 hover:text-white"><X size={24} /></button>
+                                </div>
                             </div>
 
                             {selectedLocker.status === 'occupied' ? (

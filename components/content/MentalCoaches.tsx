@@ -195,10 +195,12 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
         {showForm && editingUser && (
           <motion.div layout initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <Card className="mb-6">
+              {/* Form Content */}
               <h3 className="text-lg font-bold text-white mb-4">
                 {editingUser.id ? `멘탈코치 정보 수정: ${editingUser.name}` : '신규 멘탈코치 등록'}
               </h3>
               <form onSubmit={handleSave} className="space-y-4">
+                {/* Form Inputs - Same */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-300 mb-1">이름</label>
@@ -298,7 +300,7 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
         )}
       </AnimatePresence>
 
-      <Card>
+      <Card initial={{ opacity: 0, y: 0 }} animate={{ opacity: 1, y: 0 }}>
         <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-white">멘탈코치 목록</h2>
             <Button onClick={handleAddNew}>신규 멘탈코치 등록</Button>
@@ -378,6 +380,7 @@ const MentalCoaches: React.FC<MentalCoachesProps> = ({ onImpersonate }) => {
       </Card>
       
       <AnimatePresence>
+        {/* Confirmation Modal - Same */}
         {actionToConfirm && (
             <motion.div
                 initial={{ opacity: 0 }}

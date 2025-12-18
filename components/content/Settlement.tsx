@@ -111,7 +111,7 @@ const Settlement: React.FC<SettlementProps> = ({ users, reservations }) => {
     return (
         <Card>
             <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 className="text-xl font-bold text-white">강사별 정산 관리</h2>
+                <h2 className="text-xl font-bold text-white">강사별 매출 관리</h2>
                 <div className="flex gap-2">
                     <Select 
                         value={selectedYear} 

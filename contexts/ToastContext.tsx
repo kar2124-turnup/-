@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { AlertTriangle, CheckCircle, Info, X } from 'lucide-react';
@@ -56,7 +57,7 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed top-4 right-4 z-[9999] w-full max-w-sm space-y-3">
+      <div className="fixed top-4 right-4 z-[10001] w-full max-w-sm space-y-3">
         <AnimatePresence>
         {toasts.map(toast => (
           <motion.div

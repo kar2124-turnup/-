@@ -9,6 +9,9 @@ const seedData = {
     // Admin user
     { id: 'admin', username: 'tug', name: '관리자', password: '2124', role: 'admin', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 999, '50': 999, 'mental': 999, 'rentals': 999 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-0000-0000', memo: '' },
     
+    // Temporary Admin (Requested)
+    { id: 'admin_aaa', username: 'aaa', name: '임시 관리자', password: 'aaaa', role: 'admin', membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 999, '50': 999, 'mental': 999, 'rentals': 999 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-0000-0000', memo: '삭제 가능한 임시 관리자 계정' },
+
     // New Members
     { id: 'user_sparrow', username: '1', name: '참새', password: '1', role: 'member', membership: { start: nowISO(), end: daysFromNow(60), sessions: { '30': 10, '50': 10, 'mental': 0, 'rentals': 0 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-1111-1111', memo: '등록 상품: 50분 10회 레슨' },
     { id: 'user_pigeon', username: '2', name: '비둘기', password: '2', role: 'member', membership: { start: nowISO(), end: daysFromNow(30), sessions: { '30': 5, '50': 5, 'mental': 0, 'rentals': 5 } }, notificationsRead: {}, notificationsDeleted: {}, archivedNotificationIds: {}, createdAt: nowISO(), phone: '010-2222-2222', memo: '' },
@@ -88,23 +91,14 @@ const seedData = {
     ];
   },
   getLockers: (): Locker[] => {
-    const lockers: Locker[] = [];
-    // Generate 50 lockers
-    for (let i = 1; i <= 50; i++) {
-        const section = i <= 25 ? 'A' : 'B';
-        const isOccupied = i % 5 === 0; // Simulate some usage
-        lockers.push({
-            id: `locker_${i}`,
-            number: i,
-            section: section,
-            status: isOccupied ? 'occupied' : 'available',
-            userId: isOccupied ? 'user_sparrow' : undefined,
-            userName: isOccupied ? '참새' : undefined,
-            startDate: isOccupied ? daysFromNow(-30) : undefined,
-            endDate: isOccupied ? daysFromNow(60) : undefined,
-        });
-    }
-    return lockers;
+    return [
+        {
+            id: 'locker_1',
+            number: 1,
+            section: 'A',
+            status: 'available'
+        }
+    ];
   }
 };
 
@@ -129,6 +123,32 @@ const _setData = <T>(key: string, data: T): void => {
 
 // --- API Initialization ---
 const _initData = () => {
+    // Force reset lockers to single item if it detects the old seed data (length 50)
+    const currentLockers = _getData<Locker[]>(STORAGE_KEYS.lockers);
+    if (currentLockers && currentLockers.length === 50) {
+        _setData(STORAGE_KEYS.lockers, seedData.getLockers());
+    }
+
+    // Force inject temporary admin 'aaa' if it doesn't exist in current users
+    const currentUsers = _getData<User[]>(STORAGE_KEYS.users) || [];
+    if (currentUsers.length > 0 && !currentUsers.find(u => u.username === 'aaa')) {
+        const tempAdmin: User = { 
+            id: 'admin_aaa', 
+            username: 'aaa', 
+            name: '임시 관리자', 
+            password: 'aaaa', 
+            role: 'admin', 
+            membership: { start: nowISO(), end: daysFromNow(9999), sessions: { '30': 999, '50': 999, 'mental': 999, 'rentals': 999 } }, 
+            notificationsRead: {}, 
+            notificationsDeleted: {}, 
+            archivedNotificationIds: {}, 
+            createdAt: nowISO(), 
+            phone: '010-0000-0000', 
+            memo: '삭제 가능한 임시 관리자 계정' 
+        };
+        _setData(STORAGE_KEYS.users, [...currentUsers, tempAdmin]);
+    }
+
     // 이미 데이터가 존재하면 초기화하지 않음 (새로고침 시 데이터 유지)
     if (localStorage.getItem(STORAGE_KEYS.users)) {
       return;
@@ -1036,6 +1056,38 @@ const getLockers = async (): Promise<Locker[]> => {
     return _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
 };
 
+const createLocker = async (lockerData: { number: number, section: string }): Promise<Locker[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    const lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
+    
+    const exists = lockers.some(l => l.number === lockerData.number && l.section === lockerData.section);
+    if (exists) {
+        throw new Error(`이미 ${lockerData.section} 구역에 ${lockerData.number}번 락커가 존재합니다.`);
+    }
+
+    const newLocker: Locker = {
+        id: `locker_${generateUUID()}`,
+        number: lockerData.number,
+        section: lockerData.section,
+        status: 'available'
+    };
+    const updatedLockers = [...lockers, newLocker];
+    _setData(STORAGE_KEYS.lockers, updatedLockers);
+    return updatedLockers;
+};
+
+const deleteLocker = async (lockerId: string): Promise<Locker[]> => {
+    await new Promise(res => setTimeout(res, DELAY));
+    let lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
+    const locker = lockers.find(l => l.id === lockerId);
+    if (locker && locker.status === 'occupied') {
+        throw new Error('사용 중인 락커는 삭제할 수 없습니다. 먼저 배정을 해제해주세요.');
+    }
+    lockers = lockers.filter(l => l.id !== lockerId);
+    _setData(STORAGE_KEYS.lockers, lockers);
+    return lockers;
+};
+
 const assignLocker = async (lockerId: string, userId: string, startDate: string, endDate: string): Promise<Locker[]> => {
     await new Promise(res => setTimeout(res, DELAY));
     let lockers = _getData<Locker[]>(STORAGE_KEYS.lockers) || [];
@@ -1165,6 +1217,8 @@ export const api = {
     deleteReservation,
     updateReservationStatus,
     getLockers,
+    createLocker,
+    deleteLocker,
     assignLocker,
     releaseLocker,
     getConsultations,
